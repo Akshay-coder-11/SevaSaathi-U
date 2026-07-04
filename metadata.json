@@ -1,0 +1,6 @@
+{
+  "name": "SevaSaathi",
+  "description": "India's Smart Local Service Marketplace for Booking Trusted Local Experts (Mechanics, Electricians, Plumbers, Cooks, and more) at Your Doorstep.",
+  "requestFramePermissions": ["geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
