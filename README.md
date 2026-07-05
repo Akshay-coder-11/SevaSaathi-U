@@ -4,7 +4,7 @@ SevaSaathi is a full-stack, multi-dashboard platform designed to connect local s
 
 ---
 
-## 📋 Project Explanation & Core Features
+## Project Explanation & Core Features
 
 SevaSaathi handles end-to-end task dispatching, bidding, tracking, and diagnostics for common domestic services. 
 
