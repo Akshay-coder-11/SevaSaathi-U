@@ -4,7 +4,7 @@ const sendEmail = async (options) => {
   const isDev = process.env.NODE_ENV !== 'production' || !process.env.EMAIL_HOST;
 
   if (isDev) {
-    console.log('✉️  [Nodemailer Mock] Simulation Email Sent:');
+    console.log('[Nodemailer Mock] Simulation Email Sent:');
     console.log(`To: ${options.email}`);
     console.log(`Subject: ${options.subject}`);
     console.log(`Message: ${options.message}`);

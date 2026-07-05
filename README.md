@@ -1,77 +1,178 @@
-#  SevaSaathi - Multi-Dashboard Application
+# SevaSaathi - On-Demand Local Services Platform
 
-This repository contains the full-stack codebase for **SevaSaathi**, structured cleanly to allow independent development and deployment of the frontend and backend.
+SevaSaathi is a full-stack, multi-dashboard platform designed to connect local service seekers (Customers) with neighborhood freelance micro-contractors (Service Providers) in India. The application features highly specialized custom dashboards tailored to each user role, interactive real-time simulation engines, and an AI-powered helper companion.
 
 ---
 
-##  Repository Structure
+## 📋 Project Explanation & Core Features
 
-Your project is structured with strict separation of concerns, keeping the repository clean and ready for deployment:
+SevaSaathi handles end-to-end task dispatching, bidding, tracking, and diagnostics for common domestic services. 
+
+### 1. User Roles & Dedicated Dashboards
+*   **Customer Dashboard**:
+    *   **Direct Search & Discovery**: Browse verified service providers across multiple categories (Electricians, Plumbers, Mechanics, Cooks/Chefs, Cleaners, Painters, Masons/Mistris, and general Helpers).
+    *   **Direct & Emergency Bookings**: Book providers with structured location details (house number, street, city, pin code), custom dates, duration, instructions, and optional emergency fast-dispatch toggles.
+    *   **Broadcast Booking Engine**: Broadcast open service request tenders to all nearby available professionals in a specific category, letting the first responder accept the job.
+    *   **Live GPS Dispatch Simulator**: A simulated tracking engine that calculates real-time ETA and distance, advancing dynamically through five visual stages (*Assigned, Dispatched, Heading Over, Nearby, and Arrived at Doorstep*).
+*   **Provider Dashboard**:
+    *   **Profile Control**: Configure categories, hourly rates, custom introductory bios, and technical skill tags.
+    *   **Real-time Availability**: Easily toggle availability status (`Available` or `Busy`) to manage job incoming flows.
+    *   **Contract Management**: Review, accept, and update active assigned jobs, advancing their fulfillment statuses.
+    *   **Earnings Tracker**: View total completed tasks and aggregated platform earnings.
+*   **Admin Dashboard**:
+    *   **Operational Control Room**: Manage and audit all active accounts, monitor total platform metrics, and track service categories.
+
+### 2. SevaSaathi AI Mitra (AI Chatbot)
+*   An intelligent chatbot helper powered by **Google Gemini API**.
+*   Diagnoses home repair issues from descriptions, translates user problems into search categories, suggests standard diagnostic troubleshooting steps, and provides safety protocols before a technician arrives.
+
+---
+
+## File Structure
+
+The project is structured with a strict separation of concerns, dividing code into modular, self-contained `frontend` and `backend` layers:
 
 ```text
-├──  backend        <-- Node.js / Express / MongoDB (Deploy to Render)
-├──  frontend       <-- React / Vite / Tailwind CSS (Deploy to Vercel)
-├── .gitignore     <-- Configured to keep your repository ultra-clean
-└── README.md      <-- This deployment guide
+├── backend/                      # Node.js, Express, and MongoDB Backend Server
+│   ├── config/                   # Configuration files (Database connections, file upload setup)
+│   │   ├── db.js                 # MongoDB connection logic using Mongoose
+│   │   └── multer.js             # Image uploading helper
+│   ├── controllers/              # Request handlers containing business logic
+│   │   ├── aiController.js       # Handles Gemini API Mitra chat requests
+│   │   ├── authController.js     # User registration, login, and verification logic
+│   │   └── userController.js     # Handles user profiles and booking actions
+│   ├── middleware/               # Express middlewares
+│   │   ├── authMiddleware.js     # Validates JWT tokens and checks user roles
+│   │   └── errorMiddleware.js    # Formats API error messages
+│   ├── models/                   # Mongoose schemas representing database collections
+│   │   ├── Booking.js            # Booking data schema (Date, address, status, cost)
+│   │   └── User.js               # User accounts, custom profiles, and credentials
+│   ├── routes/                   # Express router mapping API endpoints
+│   │   ├── aiRoutes.js           # Router for chatbot endpoints
+│   │   ├── authRoutes.js         # Router for auth & OTP verification
+│   │   └── userRoutes.js         # Router for user profiles & bookings
+│   ├── utils/                    # Shared utility files
+│   │   ├── errorResponse.js      # Standardized custom error responses
+│   │   ├── generateToken.js      # JWT token creation helper
+│   │   └── sendEmail.js          # Handles OTP mail dispatches (or mock triggers)
+│   ├── app.js                    # Core Express app initialization & route registration
+│   ├── package.json              # Backend dependencies and execution scripts
+│   └── server.js                 # Backend entry point running the HTTP server
+│
+├── frontend/                     # React, Vite, and Tailwind CSS Frontend Client
+│   ├── src/                      # Source directory
+│   │   ├── components/           # Reusable UI widgets (Navbar, Sidebar, Logo, ProtectedRoute)
+│   │   ├── context/              # React Context Provider for global Authentication State
+│   │   │   └── AuthContext.jsx   # Manages user token persistence and direct API logins
+│   │   ├── layouts/              # Main page layouts
+│   │   ├── pages/                # High-level route pages (Home, Login, Register, ForgotPassword)
+│   │   │   └── Home.jsx          # Custom role-based dashboards, maps, and chatbot view
+│   │   ├── services/             # Axios instance configured to handle base API URLs
+│   │   │   └── api.js            # Automatically injects JWT headers on requests
+│   │   ├── App.jsx               # React client routing table
+│   │   ├── index.css             # Tailwinds global entry styles
+│   │   └── main.jsx              # React app client entry point
+│   ├── package.json              # Client-side configuration and scripts
+│   ├── tailwind.config.js        # Custom Tailwind configurations
+│   └── vite.config.js            # Vite build setup with React plugins
+│
+└── .gitignore                    # Ensures clean repository commits
 ```
 
->  **Note on Root Wrapper Files:**
-> Root files (`package.json`, `server.js`, `vite.config.js`, `index.html`) exist purely to run the integrated live preview inside AI Studio on a single port (3000). They are ignored by the root `.gitignore` so your public GitHub repository remains pristine with only the clean `frontend` and `backend` directories.
+---
+
+## How to Run this Website Locally (VS Code Guide)
+
+Follow this step-by-step procedure to set up, configure, and execute SevaSaathi on your local computer using Visual Studio Code:
+
+### Step 1: Open the Project in VS Code
+1. Download and extract the project `.zip` file into a local folder on your computer.
+2. Open **VS Code**.
+3. Select **File > Open Folder** (or **Open...** on macOS) and choose the extracted root project directory.
 
 ---
 
-## 📤 Uploading to GitHub
+### Step 2: Configure Backend Environment Variables
+1. Navigate to the `/backend` folder.
+2. Create a new file named `.env` inside the `backend` directory.
+3. Copy and paste the following environment variables into the `/backend/.env` file:
 
-You can manage and upload this project in two ways:
+```env
+# MongoDB Configuration (Replace with your own connection string or local MongoDB URI)
+MONGODB_URI=mongodb+srv://your_username:your_password@your_cluster.mongodb.net/sevasaathi?retryWrites=true&w=majority
 
-### Option 1: Monorepo (Easiest & Recommended)
-Upload this entire folder as a single GitHub repository. Both Vercel and Render let you specify the "Root Directory" so they can build directly from the `frontend/` and `backend/` folders respectively.
-* **Pros:** Easier to keep everything in sync, only one repository to manage.
+# JWT Token Configuration
+JWT_SECRET=your_secret_jwt_key_here
+JWT_EXPIRE=30d
 
-### Option 2: Separate Repositories
-Create two separate repositories on GitHub:
-1. **Frontend Repo:** Upload only the contents of the `/frontend` directory.
-2. **Backend Repo:** Upload only the contents of the `/backend` directory.
+# Email Transporter Setup (For sending real OTP codes)
+# NOTE: If left blank, the app will run in "Mock Simulation Mode" 
+# and log OTP codes directly to the terminal console so you can test logins.
+EMAIL_HOST=
+EMAIL_PORT=
+EMAIL_USER=
+EMAIL_PASS=
+FROM_NAME=SevaSaathi Support
+FROM_EMAIL=noreply@sevasaathi.com
 
----
+# Gemini AI API Key (Required for the SevaSaathi AI Mitra Chatbot)
+GEMINI_API_KEY=your_gemini_api_key_here
 
-##  Separated Deployment Procedure
-
-Follow these steps to deploy your frontend and backend on free-tier cloud platforms.
-
-### 1. Deploy the Backend to Render
-Render is a free and reliable cloud provider for Node.js APIs.
-
-1. Create a free account at [Render.com](https://render.com).
-2. Click **New +** and select **Web Service**.
-3. Connect your GitHub repository.
-4. Set up the configuration:
-   * **Name:** `sevasaathi-backend`
-   * **Language:** `Node`
-   * **Region:** Choose a region close to your target audience (e.g., Singapore or Oregon).
-   * **Branch:** `main`
-   * **Root Directory:** `backend` *(Leave this empty if using a separate dedicated backend repo)*
-   * **Build Command:** `npm install`
-   * **Start Command:** `node server.js`
-5. Click **Advanced** and add the following **Environment Variables**:
-   * `NODE_ENV`: `production`
-   * `MONGODB_URI`: *[Your MongoDB Atlas Connection String]*
-   * `JWT_SECRET`: *[A random secure password string]*
-   * `FRONTEND_URL`: *[Your Vercel deployment URL - update this once Vercel is deployed]*
-6. Click **Create Web Service**. Your backend will build and start. Render will generate a live URL for you (e.g., `https://sevasaathi-backend.onrender.com`).
+# Port Configuration
+NODE_ENV=development
+PORT=5000
+```
 
 ---
 
-### 🔵 2. Deploy the Frontend to Vercel
-Vercel provides lightning-fast hosting for static Vite-based React applications.
+### Step 3: Configure Frontend Environment Variables
+1. Navigate to the `/frontend` folder.
+2. Create a new file named `.env` inside the `frontend` directory.
+3. Copy and paste the following environment variable into the `/frontend/.env` file:
 
-1. Create a free account at [Vercel.com](https://vercel.com).
-2. Click **Add New...** and select **Project**.
-3. Import your GitHub repository.
-4. Configure the project settings:
-   * **Framework Preset:** `Vite`
-   * **Root Directory:** Click **Edit** and choose the `frontend` folder. *(Leave as default if using a separate dedicated frontend repo)*
-   * **Build and Output Settings:** Leave as default (`vite build` and `dist`).
-5. Open the **Environment Variables** accordion and add:
-   * `VITE_API_BASE_URL`: `https://sevasaathi-backend.onrender.com/api` *(Make sure this matches your Render URL and has `/api` appended at the end)*
-6. Click **Deploy**. Your frontend is now online! 🎉
+```env
+# Points the React frontend to your local Express server
+VITE_API_BASE_URL=http://localhost:5000/api
+```
+
+---
+
+### Step 4: Install Dependencies and Start the Backend Server
+1. Open a new terminal in VS Code (**Terminal > New Terminal**).
+2. Change your directory to the `backend` folder:
+   ```bash
+   cd backend
+   ```
+3. Install the required Node.js backend packages:
+   ```bash
+   npm install
+   ```
+4. Start the backend developer server in live reload mode (uses Nodemon):
+   ```bash
+   npm run dev
+   ```
+   *You should see output indicating that the backend server is running on port 5000 and the MongoDB connection status.*
+
+---
+
+### Step 5: Install Dependencies and Start the React Frontend
+1. Open a **second separate terminal window** in VS Code (click the `+` icon on the terminal bar in VS Code).
+2. Change your directory to the `frontend` folder:
+   ```bash
+   cd frontend
+   ```
+3. Install the required React/Vite dependencies:
+   ```bash
+   npm install
+   ```
+4. Start the Vite React development server:
+   ```bash
+   npm run dev
+   ```
+   *Vite will compile your assets and display a local access URL (usually `http://localhost:5173` or `http://localhost:3000`).*
+
+---
+
+### Step 6: Explore the Website
+1. Open your web browser and navigate to the Local URL printed by Vite (typically **`http://localhost:5173`**).
+2. Create a **Customer** or **Provider** account on the registration page to test out the customized features, make live-simulated bookings, or chat with **AI Mitra**!

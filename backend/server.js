@@ -16,6 +16,6 @@ app.use(errorHandler);
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`====================================================`);
-  console.log(`🚀 SevaSaathi Backend running on port ${PORT}`);
+  console.log(` SevaSaathi Backend running on port ${PORT}`);
   console.log(`====================================================`);
 });
