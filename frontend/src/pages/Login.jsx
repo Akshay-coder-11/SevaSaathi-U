@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Mail, Lock, AlertCircle, ArrowRight, CheckCircle, Eye, EyeOff } from 'lucide-react';
+import GoogleSignInButton from '../components/GoogleSignInButton';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -132,6 +133,23 @@ export default function Login() {
             </button>
           </form>
 
+          <div className="relative flex py-1.5 items-center">
+            <div className="flex-grow border-t border-slate-850"></div>
+            <span className="flex-shrink mx-3 text-slate-500 text-[10px] font-bold uppercase tracking-widest">or</span>
+            <div className="flex-grow border-t border-slate-850"></div>
+          </div>
+
+          <GoogleSignInButton
+            role="customer"
+            onAuthSuccess={(user) => {
+              setSuccessMsg(`Welcome back, ${user.name}! Authenticating via Google...`);
+              setTimeout(() => {
+                navigate(redirectPath, { replace: true });
+              }, 1000);
+            }}
+            onAuthError={(msg) => setErrorMsg(msg)}
+          />
+
           <div className="text-center">
             <span className="text-slate-500 text-xs">Don't have an account? </span>
             <Link
@@ -151,13 +169,13 @@ export default function Login() {
               onClick={() => setDemoCredentials('customer@sevasaathi.com', 'customer123')}
               className="bg-slate-950 hover:bg-slate-900 border border-slate-800 text-slate-300 py-1.5 px-2.5 rounded-lg text-[11px] font-medium transition"
             >
-              Customer Profile
+              Customer
             </button>
             <button
               onClick={() => setDemoCredentials('provider@sevasaathi.com', 'provider123')}
               className="bg-slate-950 hover:bg-slate-900 border border-slate-800 text-slate-300 py-1.5 px-2.5 rounded-lg text-[11px] font-medium transition"
             >
-              Service Expert
+              Service Provider
             </button>
             <button
               onClick={() => setDemoCredentials('admin@sevasaathi.com', 'admin123')}

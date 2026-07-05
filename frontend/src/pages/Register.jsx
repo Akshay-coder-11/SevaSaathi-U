@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { AlertCircle, CheckCircle, ArrowRight, Sparkles, Eye, EyeOff } from 'lucide-react';
+import GoogleSignInButton from '../components/GoogleSignInButton';
 
 export default function Register() {
   const [role, setRole] = useState('customer'); // customer, provider, admin
@@ -141,7 +142,7 @@ export default function Register() {
                       : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700'
                   }`}
                 >
-                  Service Expert
+                  Service Provider
                 </button>
                 <button
                   type="button"
@@ -374,6 +375,23 @@ export default function Register() {
               {!isSubmitting && <ArrowRight className="w-4 h-4" />}
             </button>
           </form>
+
+          <div className="relative flex py-1.5 items-center">
+            <div className="flex-grow border-t border-slate-850"></div>
+            <span className="flex-shrink mx-3 text-slate-500 text-[10px] font-bold uppercase tracking-widest">or</span>
+            <div className="flex-grow border-t border-slate-850"></div>
+          </div>
+
+          <GoogleSignInButton
+            role={role}
+            onAuthSuccess={(user) => {
+              setSuccessMsg(`Welcome, ${user.name}! Authenticated via Google...`);
+              setTimeout(() => {
+                navigate('/');
+              }, 1200);
+            }}
+            onAuthError={(msg) => setErrorMsg(msg)}
+          />
 
           <div className="text-center">
             <span className="text-slate-500 text-xs">Already have an account? </span>

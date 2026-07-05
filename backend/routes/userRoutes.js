@@ -5,9 +5,12 @@ import {
   changePassword,
   uploadProfileImage,
   addAddress,
-  getAddresses
+  getAddresses,
+  getAllUsers,
+  toggleUserSuspension,
+  verifyProvider
 } from '../controllers/userController.js';
-import { protect } from '../middleware/authMiddleware.js';
+import { protect, authorizeRoles } from '../middleware/authMiddleware.js';
 import upload from '../config/multer.js';
 
 const router = express.Router();
@@ -23,5 +26,10 @@ router.post('/upload', protect, upload.single('profileImage'), uploadProfileImag
 router.route('/addresses')
   .get(protect, getAddresses)
   .post(protect, addAddress);
+
+// Admin Routes
+router.get('/admin/users', protect, authorizeRoles('admin'), getAllUsers);
+router.put('/admin/suspend/:id', protect, authorizeRoles('admin'), toggleUserSuspension);
+router.put('/admin/verify/:id', protect, authorizeRoles('admin'), verifyProvider);
 
 export default router;

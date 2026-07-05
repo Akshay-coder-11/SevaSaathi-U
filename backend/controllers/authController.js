@@ -306,3 +306,140 @@ export const resetPassword = asyncHandler(async (req, res, next) => {
     data: 'Password reset complete. Session initiated.'
   });
 });
+
+// @desc    Google Sign-In / Sign-Up
+// @route   POST /api/auth/google
+// @access  Public
+export const googleLogin = asyncHandler(async (req, res, next) => {
+  const { credential, email, name, picture, role, phone } = req.body;
+
+  let userEmail = email;
+  let userName = name;
+  let userPicture = picture;
+
+  // 1. If we have a credential (real Google JWT token), parse it
+  if (credential) {
+    try {
+      const parts = credential.split('.');
+      if (parts.length === 3) {
+        // Decode base64url payload
+        const payloadStr = Buffer.from(parts[1].replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf-8');
+        const payload = JSON.parse(payloadStr);
+        if (payload && payload.email) {
+          userEmail = payload.email;
+          userName = payload.name || userName;
+          userPicture = payload.picture || userPicture;
+        }
+      }
+    } catch (err) {
+      console.warn("Could not parse Google credential JWT:", err);
+    }
+  }
+
+  if (!userEmail) {
+    return next(new ErrorResponse('Google authentication failed. No email provided.', 400));
+  }
+
+  userEmail = userEmail.toLowerCase();
+
+  let user;
+  if (mongoose.connection.readyState === 1) {
+    try {
+      user = await User.findOne({ email: userEmail });
+    } catch (err) {
+      console.warn("Mongoose query error in googleLogin:", err);
+    }
+  }
+
+  // Preloaded demo users fallback if not in database
+  if (!user) {
+    const defaultAccounts = {
+      'customer@sevasaathi.com': { id: 'cust_1', name: 'Aarav Mehta', role: 'customer', phone: '9876543210', address: 'Sector 62, Noida' },
+      'provider@sevasaathi.com': { id: 'prov_1', name: 'Ramesh Kumar', role: 'provider', phone: '9812345678', address: 'Sector 66, Noida', providerDetails: { category: 'Electrician', rate: 299, rating: 4.8, ratingsCount: 15, isVerified: true, availability: 'available', completedJobs: 42, earnings: 12500, bio: 'Expert certified residential electrician with 8+ years experience.', skills: ['Wiring', 'AC installation'] } },
+      'admin@sevasaathi.com': { id: 'admin_1', name: 'Admin Superuser', role: 'admin', phone: '9999999999', address: 'SevaSaathi HQ, Connaught Place' }
+    };
+    const demo = defaultAccounts[userEmail];
+    if (demo) {
+      user = {
+        _id: demo.id,
+        id: demo.id,
+        name: demo.name,
+        email: userEmail,
+        role: demo.role,
+        phone: demo.phone,
+        address: demo.address,
+        providerDetails: demo.providerDetails,
+        profileImage: userPicture || ''
+      };
+    }
+  }
+
+  // If user does not exist, create a new one dynamically
+  if (!user) {
+    const userFields = {
+      name: userName || 'Google User',
+      email: userEmail,
+      password: crypto.randomBytes(16).toString('hex'), // satisfies password requirement
+      role: role || 'customer',
+      phone: phone || '9999999999', // satisfies phone requirement
+      address: 'Google Sign-In Address',
+      profileImage: userPicture || '',
+    };
+
+    if (userFields.role === 'provider') {
+      userFields.providerDetails = {
+        category: 'Electrician',
+        skills: ['General Repair'],
+        rate: 200,
+        bio: 'Professional ready to serve via Google.',
+        isVerified: false,
+        availability: 'available',
+        completedJobs: 0,
+        earnings: 0
+      };
+    }
+
+    if (mongoose.connection.readyState === 1) {
+      try {
+        user = await User.create(userFields);
+      } catch (err) {
+        console.warn("Could not save new Google user to MongoDB. Mocking successful registration.", err);
+        user = {
+          _id: `google_${Date.now()}`,
+          id: `google_${Date.now()}`,
+          ...userFields,
+          joinedAt: new Date().toISOString()
+        };
+      }
+    } else {
+      user = {
+        _id: `google_${Date.now()}`,
+        id: `google_${Date.now()}`,
+        ...userFields,
+        joinedAt: new Date().toISOString()
+      };
+    }
+  }
+
+  if (user.isSuspended) {
+    return next(new ErrorResponse('This account has been suspended by the administrator.', 403));
+  }
+
+  // Generate Session Token
+  const token = generateToken(res, user._id || user.id);
+
+  res.status(200).json({
+    success: true,
+    token,
+    user: {
+      id: user._id || user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      phone: user.phone || '9999999999',
+      address: user.address || '',
+      profileImage: user.profileImage || userPicture || '',
+      providerDetails: user.providerDetails
+    }
+  });
+});

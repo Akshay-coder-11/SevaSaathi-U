@@ -228,3 +228,108 @@ export const getAddresses = asyncHandler(async (req, res, next) => {
     addresses
   });
 });
+
+// @desc    Get all users (Admin only)
+// @route   GET /api/user/admin/users
+// @access  Private/Admin
+export const getAllUsers = asyncHandler(async (req, res, next) => {
+  let dbUsers = [];
+  if (mongoose.connection.readyState === 1) {
+    try {
+      dbUsers = await User.find({});
+    } catch (err) {}
+  }
+  
+  // Map users to clean object format
+  const mappedUsers = dbUsers.map(user => ({
+    id: user._id || user.id,
+    name: user.name,
+    email: user.email,
+    role: user.role,
+    phone: user.phone,
+    address: user.address,
+    isSuspended: !!user.isSuspended,
+    providerDetails: user.providerDetails
+  }));
+
+  res.status(200).json({
+    success: true,
+    users: mappedUsers
+  });
+});
+
+// @desc    Toggle user suspension (Admin only)
+// @route   PUT /api/user/admin/suspend/:id
+// @access  Private/Admin
+export const toggleUserSuspension = asyncHandler(async (req, res, next) => {
+  const userId = req.params.id;
+  if (mongoose.connection.readyState === 1) {
+    try {
+      const user = await User.findById(userId);
+      if (!user) {
+        return next(new ErrorResponse('User not found', 404));
+      }
+      user.isSuspended = !user.isSuspended;
+      await user.save();
+      return res.status(200).json({
+        success: true,
+        message: `User is now ${user.isSuspended ? 'suspended' : 'active'}`,
+        user: {
+          id: user._id || user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          isSuspended: user.isSuspended
+        }
+      });
+    } catch (err) {
+      return next(new ErrorResponse('Database error while updating status', 500));
+    }
+  }
+
+  res.status(200).json({
+    success: true,
+    message: 'Simulation: user suspension status modified successfully.'
+  });
+});
+
+// @desc    Verify provider profile (Admin only)
+// @route   PUT /api/user/admin/verify/:id
+// @access  Private/Admin
+export const verifyProvider = asyncHandler(async (req, res, next) => {
+  const userId = req.params.id;
+  if (mongoose.connection.readyState === 1) {
+    try {
+      const user = await User.findById(userId);
+      if (!user) {
+        return next(new ErrorResponse('User not found', 404));
+      }
+      if (user.role !== 'provider') {
+        return next(new ErrorResponse('User is not a service provider', 400));
+      }
+      if (!user.providerDetails) {
+        user.providerDetails = {};
+      }
+      user.providerDetails.isVerified = true;
+      await user.save();
+      return res.status(200).json({
+        success: true,
+        message: 'Provider profile verified successfully',
+        user: {
+          id: user._id || user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          providerDetails: user.providerDetails
+        }
+      });
+    } catch (err) {
+      return next(new ErrorResponse('Database error while verifying provider', 500));
+    }
+  }
+
+  res.status(200).json({
+    success: true,
+    message: 'Simulation: provider verified successfully.'
+  });
+});

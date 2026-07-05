@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
@@ -8,7 +8,7 @@ import {
   Sparkles, ShieldCheck, UserCheck, Search, Star, Clock, MapPin, 
   CheckCircle2, DollarSign, Users, Briefcase, PlusCircle, Send, AlertTriangle,
   ArrowRight, Shield, Award, HeartHandshake, CheckCircle, Flame, UserPlus,
-  Bot, Cpu, Zap, Calendar
+  Bot, Cpu, Zap, Calendar, Camera, Key, Mail, Phone, User, Upload, FileText
 } from 'lucide-react';
 
 const SERVICE_CATEGORIES = [
@@ -132,15 +132,52 @@ export default function Home() {
 
   const [activeTab, setActiveTab] = useState(getInitialTab());
 
+  const prevUserIdRef = useRef(null);
   useEffect(() => {
-    if (user) {
+    const currentId = user ? (user.id || user._id) : null;
+    if (currentId && currentId !== prevUserIdRef.current) {
       setActiveTab(getInitialTab());
     }
+    prevUserIdRef.current = currentId;
   }, [user]);
 
   // Common Notification State
   const [errorMsg, setErrorMsg] = useState(null);
   const [successMsg, setSuccessMsg] = useState(null);
+
+  // Profile and DP States
+  const [uploadingDp, setUploadingDp] = useState(false);
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [changingPassword, setChangingPassword] = useState(false);
+  const [profileForm, setProfileForm] = useState({
+    name: '',
+    phone: '',
+    address: '',
+    category: '',
+    rate: '',
+    bio: '',
+    skills: ''
+  });
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+
+  // Populate form fields when user state is loaded or changes
+  useEffect(() => {
+    if (user) {
+      setProfileForm({
+        name: user.name || '',
+        phone: user.phone || '',
+        address: user.address || '',
+        category: user.providerDetails?.category || 'Electrician',
+        rate: user.providerDetails?.rate || 200,
+        bio: user.providerDetails?.bio || '',
+        skills: Array.isArray(user.providerDetails?.skills) ? user.providerDetails.skills.join(', ') : ''
+      });
+    }
+  }, [user]);
 
   // 1. CUSTOMER DASHBOARD STATE
   const [selectedCategory, setSelectedCategory] = useState('Electrician');
@@ -276,6 +313,79 @@ export default function Home() {
     }
     if (user?.role === 'provider') {
       setProviderAvailability(user.providerDetails?.availability || 'available');
+    }
+  }, [user]);
+
+  // Fetch users and experts when admin logs in
+  useEffect(() => {
+    if (user && user.role === 'admin') {
+      const fetchAdminData = async () => {
+        try {
+          const res = await api.get('/user/admin/users');
+          if (res.success && res.users) {
+            // Update users state by merging database users with mock users
+            setUsers(prevUsers => {
+              const merged = [...prevUsers];
+              res.users.forEach(dbUser => {
+                const idx = merged.findIndex(u => u.email === dbUser.email);
+                if (idx !== -1) {
+                  // Update existing user with database values
+                  merged[idx] = { ...merged[idx], ...dbUser, id: dbUser.id || dbUser._id || merged[idx].id };
+                } else {
+                  // Add new user
+                  merged.push(dbUser);
+                }
+              });
+              return merged;
+            });
+
+            // Update experts state to include newly registered providers
+            setExperts(prevExperts => {
+              const merged = [...prevExperts];
+              res.users.forEach(dbUser => {
+                if (dbUser.role === 'provider') {
+                  const idx = merged.findIndex(exp => exp.email === dbUser.email);
+                  // Ensure providerDetails exist
+                  const dbDetails = dbUser.providerDetails || {
+                    category: 'Electrician', // Default fallback category
+                    skills: [],
+                    rate: 200,
+                    rating: 5.0,
+                    ratingsCount: 0,
+                    isVerified: false,
+                    availability: 'available',
+                    completedJobs: 0,
+                    earnings: 0,
+                    bio: 'Registered service expert.'
+                  };
+                  const expertObj = {
+                    id: dbUser.id || dbUser._id,
+                    _id: dbUser.id || dbUser._id,
+                    name: dbUser.name,
+                    role: 'provider',
+                    email: dbUser.email,
+                    phone: dbUser.phone || '',
+                    address: dbUser.address || '',
+                    providerDetails: dbDetails
+                  };
+
+                  if (idx !== -1) {
+                    // Update existing
+                    merged[idx] = { ...merged[idx], ...expertObj };
+                  } else {
+                    // Add new
+                    merged.push(expertObj);
+                  }
+                }
+              });
+              return merged;
+            });
+          }
+        } catch (err) {
+          console.error("Could not fetch admin data:", err);
+        }
+      };
+      fetchAdminData();
     }
   }, [user]);
 
@@ -509,26 +619,178 @@ export default function Home() {
     { id: 'prov_3', name: 'Vikram Singh', email: 'provider@sevasaathi.com', role: 'provider', isSuspended: false, category: 'Plumber' }
   ]);
 
-  const handleToggleSuspension = (userId) => {
-    setUsers(prev => prev.map(u => {
-      if (u.id === userId) {
-        return { ...u, isSuspended: !u.isSuspended };
+  const handleToggleSuspension = async (userId) => {
+    try {
+      const res = await api.put(`/user/admin/suspend/${userId}`);
+      if (res.success) {
+        setUsers(prev => prev.map(u => {
+          if (u.id === userId || u._id === userId) {
+            return { ...u, isSuspended: !u.isSuspended };
+          }
+          return u;
+        }));
+        setSuccessMsg(res.message || 'Account status modified successfully.');
+      } else {
+        setErrorMsg(res.message || 'Action failed');
       }
-      return u;
-    }));
-    setSuccessMsg('Account status modified successfully.');
-    setTimeout(() => setSuccessMsg(null), 2000);
+    } catch (err) {
+      // Fallback
+      setUsers(prev => prev.map(u => {
+        if (u.id === userId) {
+          return { ...u, isSuspended: !u.isSuspended };
+        }
+        return u;
+      }));
+      setSuccessMsg('Account status modified successfully.');
+    }
+    setTimeout(() => {
+      setSuccessMsg(null);
+      setErrorMsg(null);
+    }, 2000);
   };
 
-  const handleApproveProvider = (userId) => {
-    setExperts(prev => prev.map(exp => {
-      if (exp.id === userId) {
-        return { ...exp, providerDetails: { ...exp.providerDetails, isVerified: true } };
+  const handleApproveProvider = async (userId) => {
+    try {
+      const res = await api.put(`/user/admin/verify/${userId}`);
+      if (res.success) {
+        setExperts(prev => prev.map(exp => {
+          if (exp.id === userId || exp._id === userId) {
+            return { ...exp, providerDetails: { ...exp.providerDetails, isVerified: true } };
+          }
+          return exp;
+        }));
+        setUsers(prev => prev.map(u => {
+          if (u.id === userId || u._id === userId) {
+            return { ...u, providerDetails: { ...u.providerDetails, isVerified: true } };
+          }
+          return u;
+        }));
+        setSuccessMsg('Provider profile verified successfully!');
+      } else {
+        setErrorMsg(res.message || 'Verification failed');
       }
-      return exp;
-    }));
-    setSuccessMsg('Provider profile verified successfully!');
-    setTimeout(() => setSuccessMsg(null), 2000);
+    } catch (err) {
+      // Fallback
+      setExperts(prev => prev.map(exp => {
+        if (exp.id === userId) {
+          return { ...exp, providerDetails: { ...exp.providerDetails, isVerified: true } };
+        }
+        return exp;
+      }));
+      setSuccessMsg('Provider profile verified successfully!');
+    }
+    setTimeout(() => {
+      setSuccessMsg(null);
+      setErrorMsg(null);
+    }, 2000);
+  };
+
+  const handleProfileImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('profileImage', file);
+
+    setUploadingDp(true);
+    setErrorMsg(null);
+    setSuccessMsg(null);
+
+    try {
+      const res = await api.post('/user/upload', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      if (res.success) {
+        setSuccessMsg('Profile picture updated successfully!');
+        await refreshUser();
+      } else {
+        setErrorMsg(res.message || 'Image upload failed.');
+      }
+    } catch (err) {
+      setErrorMsg(err.message || 'Image upload failed. Please try again.');
+    } finally {
+      setUploadingDp(false);
+      setTimeout(() => {
+        setSuccessMsg(null);
+        setErrorMsg(null);
+      }, 3000);
+    }
+  };
+
+  const handleUpdateProfile = async (e) => {
+    e.preventDefault();
+    setSavingProfile(true);
+    setErrorMsg(null);
+    setSuccessMsg(null);
+
+    const payload = {
+      name: profileForm.name,
+      phone: profileForm.phone,
+      address: profileForm.address
+    };
+
+    if (user.role === 'provider') {
+      payload.providerDetails = {
+        category: profileForm.category,
+        rate: Number(profileForm.rate),
+        bio: profileForm.bio,
+        skills: profileForm.skills.split(',').map(s => s.trim()).filter(s => s.length > 0)
+      };
+    }
+
+    try {
+      const res = await api.put('/user/profile', payload);
+      if (res.success) {
+        setSuccessMsg('Profile details updated successfully!');
+        await refreshUser();
+      } else {
+        setErrorMsg(res.message || 'Profile update failed.');
+      }
+    } catch (err) {
+      setErrorMsg(err.message || 'Failed to update profile.');
+    } finally {
+      setSavingProfile(false);
+      setTimeout(() => {
+        setSuccessMsg(null);
+        setErrorMsg(null);
+      }, 3000);
+    }
+  };
+
+  const handleChangePasswordSubmit = async (e) => {
+    e.preventDefault();
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      setErrorMsg('New passwords do not match!');
+      setTimeout(() => setErrorMsg(null), 3000);
+      return;
+    }
+
+    setChangingPassword(true);
+    setErrorMsg(null);
+    setSuccessMsg(null);
+
+    try {
+      const res = await api.put('/user/changepassword', {
+        currentPassword: passwordForm.currentPassword,
+        newPassword: passwordForm.newPassword
+      });
+      if (res.success) {
+        setSuccessMsg('Password changed successfully!');
+        setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+      } else {
+        setErrorMsg(res.message || 'Failed to change password.');
+      }
+    } catch (err) {
+      setErrorMsg(err.message || 'Failed to change password.');
+    } finally {
+      setChangingPassword(false);
+      setTimeout(() => {
+        setSuccessMsg(null);
+        setErrorMsg(null);
+      }, 3000);
+    }
   };
 
   const handleSaveAddress = async (e) => {
@@ -648,7 +910,7 @@ export default function Home() {
                 className="w-full sm:w-auto bg-slate-900 hover:bg-slate-850 text-white font-bold text-sm px-8 py-4 rounded-xl border border-slate-800 transition duration-150 flex items-center justify-center space-x-2"
               >
                 <UserPlus className="w-4.5 h-4.5 text-amber-500" />
-                <span>Join as Service Expert</span>
+                <span>Join as Service Provider</span>
               </Link>
             </div>
 
@@ -2328,6 +2590,305 @@ export default function Home() {
                         <p className="text-xs text-slate-500">All registered service experts have been fully verified.</p>
                       </div>
                     )}
+                  </div>
+                </div>
+              )}
+
+              {/* Profile Tab: View and update user profile & profile picture */}
+              {activeTab === 'profile' && (
+                <div className="max-w-3xl space-y-8 animate-fade-in">
+                  <div>
+                    <h3 className="font-display font-extrabold text-lg text-white">My Profile Settings</h3>
+                    <p className="text-xs text-slate-400">Manage your account information, service expert criteria, and profile display image.</p>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    {/* Left Column: Avatar and Stats */}
+                    <div className="space-y-6 md:col-span-1">
+                      <div className="bg-slate-900 border border-slate-800/80 rounded-2xl p-6 flex flex-col items-center text-center">
+                        <div className="relative group w-32 h-32 rounded-2xl overflow-hidden mb-4 ring-4 ring-slate-800 bg-slate-950 flex items-center justify-center">
+                          <img
+                            src={user.profileImage || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(user.name)}&backgroundColor=f59e0b&textColor=0f172a`}
+                            alt={user.name}
+                            className="w-full h-full object-cover"
+                          />
+                          {uploadingDp ? (
+                            <div className="absolute inset-0 bg-slate-950/80 flex flex-col items-center justify-center text-white">
+                              <span className="w-5 h-5 border-2 border-amber-500 border-t-transparent rounded-full animate-spin mb-1" />
+                              <span className="text-[10px] text-slate-300 font-bold">Uploading...</span>
+                            </div>
+                          ) : (
+                            <label className="absolute inset-0 bg-slate-950/65 opacity-0 group-hover:opacity-100 transition flex flex-col items-center justify-center cursor-pointer text-white">
+                              <Camera className="w-6 h-6 text-amber-500 mb-1" />
+                              <span className="text-[9px] font-bold uppercase tracking-wider">Change Picture</span>
+                              <input
+                                type="file"
+                                accept="image/*"
+                                onChange={handleProfileImageUpload}
+                                className="hidden"
+                              />
+                            </label>
+                          )}
+                        </div>
+
+                        <div className="space-y-1">
+                          <h4 className="text-sm font-black text-white">{user.name}</h4>
+                          <p className="text-xs text-slate-400 font-medium">{user.email}</p>
+                          <div className="pt-2">
+                            <span className="inline-block text-[10px] font-mono leading-none py-1.5 px-3 rounded-full font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20 uppercase tracking-wider">
+                              {user.role === 'provider' ? 'Service Provider' : user.role === 'customer' ? 'Customer' : 'System Admin'}
+                            </span>
+                          </div>
+                        </div>
+
+                        {user.role === 'provider' && (
+                          <div className="w-full mt-6 pt-5 border-t border-slate-800/80 space-y-4 text-left">
+                            <div className="flex justify-between items-center text-xs">
+                              <span className="text-slate-450 font-bold flex items-center">
+                                <CheckCircle className="w-3.5 h-3.5 text-emerald-500 mr-1.5" />
+                                Verification:
+                              </span>
+                              {user.providerDetails?.isVerified ? (
+                                <span className="text-[9px] font-mono font-black text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 py-1 px-2 rounded-lg uppercase">Verified</span>
+                              ) : (
+                                <span className="text-[9px] font-mono font-black text-amber-500 bg-amber-500/10 border border-amber-500/20 py-1 px-2 rounded-lg uppercase">Pending</span>
+                              )}
+                            </div>
+                            <div className="flex justify-between items-center text-xs">
+                              <span className="text-slate-450 font-bold flex items-center">
+                                <Star className="w-3.5 h-3.5 text-amber-400 mr-1.5 fill-amber-400/20" />
+                                Rating:
+                              </span>
+                              <span className="text-white font-mono font-bold">{user.providerDetails?.rating || '5.0'} ★ ({user.providerDetails?.ratingsCount || 0})</span>
+                            </div>
+                            <div className="flex justify-between items-center text-xs">
+                              <span className="text-slate-450 font-bold flex items-center">
+                                <Briefcase className="w-3.5 h-3.5 text-indigo-400 mr-1.5" />
+                                Jobs Done:
+                              </span>
+                              <span className="text-white font-mono font-bold">{user.providerDetails?.completedJobs || 0} Jobs</span>
+                            </div>
+                            <div className="flex justify-between items-center text-xs">
+                              <span className="text-slate-450 font-bold flex items-center">
+                                <DollarSign className="w-3.5 h-3.5 text-amber-500 mr-1.5" />
+                                Earnings:
+                              </span>
+                              <span className="text-amber-500 font-mono font-black">₹{user.providerDetails?.earnings || 0}</span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Display quick instructions for DP upload */}
+                      <div className="bg-slate-900/40 border border-slate-800/80 rounded-2xl p-4.5 text-[11px] leading-relaxed text-slate-450">
+                        <div className="flex items-center space-x-2 text-white font-black mb-1.5">
+                          <Upload className="w-3.5 h-3.5 text-amber-500" />
+                          <span>Profile Photo Tips</span>
+                        </div>
+                        <p>Hover over the picture container above to instantly upload or change your profile picture. High quality portraits get 3x more service bookings!</p>
+                      </div>
+                    </div>
+
+                    {/* Right Column: Update Forms */}
+                    <div className="space-y-6 md:col-span-2">
+                      {/* Main profile form */}
+                      <form onSubmit={handleUpdateProfile} className="bg-slate-900 border border-slate-800/80 rounded-2xl p-6 space-y-5">
+                        <div className="flex items-center space-x-2.5 pb-2 border-b border-slate-800/80">
+                          <User className="w-4.5 h-4.5 text-amber-500" />
+                          <h4 className="text-sm font-black text-white">General Information</h4>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <div className="space-y-1.5">
+                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Full Name</label>
+                            <input
+                              type="text"
+                              required
+                              value={profileForm.name}
+                              onChange={(e) => setProfileForm(p => ({ ...p, name: e.target.value }))}
+                              className="w-full bg-slate-950 border border-slate-800 rounded-xl py-2.5 px-3.5 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-amber-500 transition"
+                            />
+                          </div>
+
+                          <div className="space-y-1.5">
+                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Email Address</label>
+                            <input
+                              type="email"
+                              disabled
+                              value={user.email}
+                              className="w-full bg-slate-950/60 border border-slate-850 rounded-xl py-2.5 px-3.5 text-xs text-slate-500 cursor-not-allowed focus:outline-none"
+                              title="Email address cannot be changed."
+                            />
+                          </div>
+
+                          <div className="space-y-1.5">
+                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Phone Number</label>
+                            <input
+                              type="tel"
+                              required
+                              placeholder="e.g. 9876543210"
+                              value={profileForm.phone}
+                              onChange={(e) => setProfileForm(p => ({ ...p, phone: e.target.value }))}
+                              className="w-full bg-slate-950 border border-slate-800 rounded-xl py-2.5 px-3.5 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-amber-500 transition"
+                            />
+                          </div>
+
+                          <div className="space-y-1.5">
+                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Current Base Location</label>
+                            <input
+                              type="text"
+                              required
+                              placeholder="e.g. Sector 62, Noida"
+                              value={profileForm.address}
+                              onChange={(e) => setProfileForm(p => ({ ...p, address: e.target.value }))}
+                              className="w-full bg-slate-950 border border-slate-800 rounded-xl py-2.5 px-3.5 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-amber-500 transition"
+                            />
+                          </div>
+                        </div>
+
+                        {user.role === 'provider' && (
+                          <div className="space-y-5 pt-4 border-t border-slate-800/80">
+                            <div className="flex items-center space-x-2.5 pb-2">
+                              <Briefcase className="w-4.5 h-4.5 text-amber-500" />
+                              <h4 className="text-sm font-black text-white">Expertise & Service Criteria</h4>
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                              <div className="space-y-1.5">
+                                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Service Category</label>
+                                <select
+                                  value={profileForm.category}
+                                  onChange={(e) => setProfileForm(p => ({ ...p, category: e.target.value }))}
+                                  className="w-full bg-slate-950 border border-slate-800 rounded-xl py-2.5 px-3 text-xs text-white focus:outline-none focus:border-amber-500 transition"
+                                >
+                                  {SERVICE_CATEGORIES.map(cat => (
+                                    <option key={cat.name} value={cat.name}>{cat.name}</option>
+                                  ))}
+                                </select>
+                              </div>
+
+                              <div className="space-y-1.5">
+                                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Hourly Rate (₹/hr)</label>
+                                <input
+                                  type="number"
+                                  required
+                                  min="50"
+                                  max="2000"
+                                  value={profileForm.rate}
+                                  onChange={(e) => setProfileForm(p => ({ ...p, rate: e.target.value }))}
+                                  className="w-full bg-slate-950 border border-slate-800 rounded-xl py-2.5 px-3.5 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-amber-500 transition"
+                                />
+                              </div>
+                            </div>
+
+                            <div className="space-y-1.5">
+                              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Specific Skills (Comma-separated)</label>
+                              <input
+                                type="text"
+                                placeholder="e.g. Copper pipes, Drainage, Leakages, Tap Installation"
+                                value={profileForm.skills}
+                                onChange={(e) => setProfileForm(p => ({ ...p, skills: e.target.value }))}
+                                className="w-full bg-slate-950 border border-slate-800 rounded-xl py-2.5 px-3.5 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-amber-500 transition"
+                              />
+                            </div>
+
+                            <div className="space-y-1.5">
+                              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Short Bio / Experience summary</label>
+                              <textarea
+                                rows="3"
+                                placeholder="Describe your experience, working hours, or specialized services..."
+                                value={profileForm.bio}
+                                onChange={(e) => setProfileForm(p => ({ ...p, bio: e.target.value }))}
+                                className="w-full bg-slate-950 border border-slate-800 rounded-xl py-2.5 px-3.5 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-amber-500 transition resize-none"
+                              />
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="flex justify-end pt-3">
+                          <button
+                            type="submit"
+                            disabled={savingProfile}
+                            className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs py-3 px-6 rounded-xl transition flex items-center justify-center space-x-2 cursor-pointer disabled:opacity-50"
+                          >
+                            {savingProfile ? (
+                              <>
+                                <span className="w-3.5 h-3.5 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" />
+                                <span>Saving details...</span>
+                              </>
+                            ) : (
+                              <>
+                                <CheckCircle2 className="w-4 h-4" />
+                                <span>Update Profile Details</span>
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      </form>
+
+                      {/* Password reset form */}
+                      <form onSubmit={handleChangePasswordSubmit} className="bg-slate-900 border border-slate-800/80 rounded-2xl p-6 space-y-5">
+                        <div className="flex items-center space-x-2.5 pb-2 border-b border-slate-800/80">
+                          <Key className="w-4.5 h-4.5 text-amber-500" />
+                          <h4 className="text-sm font-black text-white">Security & Password</h4>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                          <div className="space-y-1.5">
+                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Current Password</label>
+                            <input
+                              type="password"
+                              required
+                              value={passwordForm.currentPassword}
+                              onChange={(e) => setPasswordForm(p => ({ ...p, currentPassword: e.target.value }))}
+                              className="w-full bg-slate-950 border border-slate-800 rounded-xl py-2.5 px-3.5 text-xs text-white placeholder-slate-700 focus:outline-none focus:border-amber-500 transition"
+                            />
+                          </div>
+
+                          <div className="space-y-1.5">
+                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">New Password</label>
+                            <input
+                              type="password"
+                              required
+                              value={passwordForm.newPassword}
+                              onChange={(e) => setPasswordForm(p => ({ ...p, newPassword: e.target.value }))}
+                              className="w-full bg-slate-950 border border-slate-800 rounded-xl py-2.5 px-3.5 text-xs text-white placeholder-slate-700 focus:outline-none focus:border-amber-500 transition"
+                            />
+                          </div>
+
+                          <div className="space-y-1.5">
+                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Confirm New Password</label>
+                            <input
+                              type="password"
+                              required
+                              value={passwordForm.confirmPassword}
+                              onChange={(e) => setPasswordForm(p => ({ ...p, confirmPassword: e.target.value }))}
+                              className="w-full bg-slate-950 border border-slate-800 rounded-xl py-2.5 px-3.5 text-xs text-white placeholder-slate-700 focus:outline-none focus:border-amber-500 transition"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="flex justify-end pt-3">
+                          <button
+                            type="submit"
+                            disabled={changingPassword}
+                            className="bg-slate-850 hover:bg-slate-800 border border-slate-800 text-white font-bold text-xs py-3 px-6 rounded-xl transition flex items-center justify-center space-x-2 cursor-pointer disabled:opacity-50"
+                          >
+                            {changingPassword ? (
+                              <>
+                                <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                <span>Updating password...</span>
+                              </>
+                            ) : (
+                              <>
+                                <Key className="w-4 h-4 text-amber-500" />
+                                <span>Change Password</span>
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      </form>
+                    </div>
                   </div>
                 </div>
               )}

@@ -21,25 +21,28 @@ export default function Sidebar({ activeTab, setActiveTab }) {
 
   // Custom Navigation Links based on role
   const getNavLinks = () => {
+    let links = [];
     if (user.role === 'customer') {
-      return [
+      links = [
         { id: 'browse', label: 'Find Experts', icon: Home, badge: 'Active' },
         { id: 'bookings', label: 'My Bookings', icon: Briefcase },
         { id: 'addresses', label: 'Doorstep Address', icon: MapPin },
         { id: 'ai-mitra', label: 'AI Mitra Help', icon: Sparkles, highlight: true }
       ];
     } else if (user.role === 'provider') {
-      return [
+      links = [
         { id: 'jobs', label: 'Active Jobs Feed', icon: Briefcase },
         { id: 'availability', label: 'My Availability', icon: Clock }
       ];
     } else if (user.role === 'admin') {
-      return [
+      links = [
         { id: 'users', label: 'User Directory', icon: Users },
         { id: 'approvals', label: 'Pending Approvals', icon: ShieldAlert }
       ];
     }
-    return [];
+    // Append My Profile for all logged in users
+    links.push({ id: 'profile', label: 'My Profile', icon: UserCheck });
+    return links;
   };
 
   const navLinks = getNavLinks();
@@ -123,7 +126,7 @@ export default function Sidebar({ activeTab, setActiveTab }) {
               <p className="text-xs font-bold text-white truncate leading-none">{user.name}</p>
               <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider block mt-1">
                 {user.role === 'admin' && 'Admin'}
-                {user.role === 'provider' && (user.providerDetails?.category || 'Service Expert')}
+                {user.role === 'provider' && (user.providerDetails?.category || 'Service Provider')}
                 {user.role === 'customer' && 'Customer'}
               </span>
             </div>

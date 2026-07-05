@@ -67,6 +67,23 @@ export function AuthProvider({ children }) {
     }
   };
 
+  const loginWithGoogle = async (googleData) => {
+    setError(null);
+    try {
+      const res = await api.post('/auth/google', googleData);
+      if (res.success && res.user) {
+        if (res.token) {
+          localStorage.setItem('token', res.token);
+        }
+        setUser(res.user);
+        return res.user;
+      }
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    }
+  };
+
   const logout = async () => {
     try {
       await api.get('/auth/logout');
@@ -91,7 +108,7 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, error, login, register, logout, refreshUser, setUser }}>
+    <AuthContext.Provider value={{ user, loading, error, login, register, loginWithGoogle, logout, refreshUser, setUser }}>
       {children}
     </AuthContext.Provider>
   );
