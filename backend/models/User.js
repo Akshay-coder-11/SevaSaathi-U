@@ -13,7 +13,7 @@ const ProviderDetailsSchema = new mongoose.Schema({
   category: { 
     type: String, 
     required: true,
-    enum: ['Electrician', 'Plumber', 'Mechanic', 'Cook / Chef', 'Cleaner / Maid', 'Painter', 'General']
+    enum: ['Electrician', 'Plumber', 'Mechanic', 'Cook / Chef', 'Cleaner / Maid', 'Painter', 'Mistri (Mason)', 'Labour (Helper)', 'General']
   },
   skills: [{ type: String }],
   rate: { type: Number, required: true, default: 200 }, // Hourly rate in INR

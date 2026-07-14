@@ -8,12 +8,15 @@ import {
   getAddresses,
   getAllUsers,
   toggleUserSuspension,
-  verifyProvider
+  verifyProvider,
+  getProviders
 } from '../controllers/userController.js';
 import { protect, authorizeRoles } from '../middleware/authMiddleware.js';
 import upload from '../config/multer.js';
 
 const router = express.Router();
+
+router.get('/providers', getProviders);
 
 router.route('/profile')
   .get(protect, getProfile)

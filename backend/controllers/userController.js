@@ -248,6 +248,7 @@ export const getAllUsers = asyncHandler(async (req, res, next) => {
     role: user.role,
     phone: user.phone,
     address: user.address,
+    profileImage: user.profileImage || '',
     isSuspended: !!user.isSuspended,
     providerDetails: user.providerDetails
   }));
@@ -331,5 +332,46 @@ export const verifyProvider = asyncHandler(async (req, res, next) => {
   res.status(200).json({
     success: true,
     message: 'Simulation: provider verified successfully.'
+  });
+});
+
+// @desc    Get all providers (Public)
+// @route   GET /api/user/providers
+// @access  Public
+export const getProviders = asyncHandler(async (req, res, next) => {
+  let dbProviders = [];
+  if (mongoose.connection.readyState === 1) {
+    try {
+      dbProviders = await User.find({ role: 'provider' });
+    } catch (err) {}
+  }
+
+  const mappedProviders = dbProviders.map(user => ({
+    id: user._id || user.id,
+    _id: user._id || user.id,
+    name: user.name,
+    email: user.email,
+    role: user.role,
+    phone: user.phone,
+    address: user.address,
+    profileImage: user.profileImage || '',
+    isSuspended: !!user.isSuspended,
+    providerDetails: user.providerDetails || {
+      category: 'Electrician',
+      skills: [],
+      rate: 200,
+      rating: 5.0,
+      ratingsCount: 0,
+      isVerified: false,
+      availability: 'available',
+      completedJobs: 0,
+      earnings: 0,
+      bio: 'Registered service expert.'
+    }
+  }));
+
+  res.status(200).json({
+    success: true,
+    providers: mappedProviders
   });
 });

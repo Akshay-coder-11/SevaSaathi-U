@@ -326,6 +326,8 @@ export default function Register() {
                         <option>Cook / Chef</option>
                         <option>Cleaner / Maid</option>
                         <option>Painter</option>
+                        <option>Mistri (Mason)</option>
+                        <option>Labour (Helper)</option>
                       </select>
                     </div>
                     <div>

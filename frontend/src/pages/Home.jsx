@@ -416,6 +416,32 @@ export default function Home() {
     }
   }, [user]);
 
+  // Fetch public registered providers from database for guests/customers
+  useEffect(() => {
+    const fetchPublicProviders = async () => {
+      try {
+        const res = await api.get('/user/providers');
+        if (res.success && res.providers) {
+          setExperts(prevExperts => {
+            const merged = [...prevExperts];
+            res.providers.forEach(dbProv => {
+              const idx = merged.findIndex(exp => exp.email === dbProv.email);
+              if (idx !== -1) {
+                merged[idx] = { ...merged[idx], ...dbProv, id: dbProv.id || dbProv._id || merged[idx].id };
+              } else {
+                merged.unshift(dbProv); // Show real newly registered ones at the top/first!
+              }
+            });
+            return merged;
+          });
+        }
+      } catch (err) {
+        console.error("Could not fetch public providers:", err);
+      }
+    };
+    fetchPublicProviders();
+  }, []);
+
   // Chat Submission Handler (Using real API endpoint with robust fallback!)
   const handleSendChatMessage = async (e) => {
     e.preventDefault();
@@ -645,6 +671,7 @@ export default function Home() {
     { id: 'prov_2', name: 'Sunita Sharma', email: 'provider@sevasaathi.com', role: 'provider', isSuspended: false, category: 'Cook / Chef' },
     { id: 'prov_3', name: 'Vikram Singh', email: 'provider@sevasaathi.com', role: 'provider', isSuspended: false, category: 'Plumber' }
   ]);
+  const [expandedUserId, setExpandedUserId] = useState(null);
 
   const handleToggleSuspension = async (userId) => {
     try {
@@ -2634,39 +2661,173 @@ export default function Home() {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-800">
-                          {users.map(u => (
-                            <tr key={u.id} className="hover:bg-slate-900/25">
-                              <td className="p-4 font-bold text-white">{u.name}</td>
-                              <td className="p-4 font-mono text-slate-450">{u.email}</td>
-                              <td className="p-4 capitalize">
-                                <span className={`py-0.5 px-2 rounded-md font-mono text-[9px] font-bold ${
-                                  u.role === 'admin' ? 'bg-rose-500/10 text-rose-450' :
-                                  u.role === 'provider' ? 'bg-amber-500/10 text-amber-450' : 'bg-blue-500/10 text-blue-450'
-                                }`}>
-                                  {u.role}
-                                </span>
-                              </td>
-                              <td className="p-4">
-                                <span className={`py-0.5 px-2 rounded-full text-[9px] font-mono font-bold ${
-                                  u.isSuspended ? 'bg-rose-500/10 text-rose-400 border border-rose-500/15' : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/15'
-                                }`}>
-                                  {u.isSuspended ? 'Suspended' : 'Active'}
-                                </span>
-                              </td>
-                              <td className="p-4 text-right">
-                                <button
-                                  onClick={() => handleToggleSuspension(u.id)}
-                                  className={`text-[10px] font-bold py-1.5 px-3 rounded-lg transition cursor-pointer ${
-                                    u.isSuspended 
-                                      ? 'bg-emerald-500/10 hover:bg-emerald-500 hover:text-slate-950 text-emerald-400'
-                                      : 'bg-rose-500/10 hover:bg-rose-500 hover:text-white text-rose-400'
-                                  }`}
-                                >
-                                  {u.isSuspended ? 'Lift Suspension' : 'Block Member'}
-                                </button>
-                              </td>
-                            </tr>
-                          ))}
+                          {users.map(u => {
+                            const isExpanded = expandedUserId === u.id || expandedUserId === u._id;
+                            const expDetails = u.role === 'provider' ? (u.providerDetails || experts.find(e => e.id === u.id || e._id === u.id || e.email === u.email)?.providerDetails) : null;
+                            
+                            return (
+                              <React.Fragment key={u.id}>
+                                <tr className={`hover:bg-slate-900/25 transition-colors cursor-pointer ${isExpanded ? 'bg-slate-900/20' : ''}`} onClick={() => setExpandedUserId(isExpanded ? null : u.id)}>
+                                  <td className="p-4">
+                                    <div className="flex items-center space-x-3">
+                                      <img
+                                        src={u.profileImage || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(u.name)}&backgroundColor=f59e0b&textColor=0f172a`}
+                                        alt={u.name}
+                                        referrerPolicy="no-referrer"
+                                        className="w-8 h-8 rounded-lg object-cover ring-1 ring-slate-800"
+                                      />
+                                      <div>
+                                        <span className="font-bold text-white block text-xs hover:text-amber-400 transition">{u.name}</span>
+                                        {u.role === 'provider' && expDetails && (
+                                          <span className="text-[9px] text-amber-500 font-mono font-black uppercase tracking-wider">{expDetails.category} Specialist</span>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </td>
+                                  <td className="p-4 font-mono text-slate-450">{u.email}</td>
+                                  <td className="p-4 capitalize">
+                                    <span className={`py-0.5 px-2 rounded-md font-mono text-[9px] font-bold ${
+                                      u.role === 'admin' ? 'bg-rose-500/10 text-rose-450' :
+                                      u.role === 'provider' ? 'bg-amber-500/10 text-amber-450' : 'bg-blue-500/10 text-blue-450'
+                                    }`}>
+                                      {u.role}
+                                    </span>
+                                  </td>
+                                  <td className="p-4">
+                                    <span className={`py-0.5 px-2 rounded-full text-[9px] font-mono font-bold ${
+                                      u.isSuspended ? 'bg-rose-500/10 text-rose-400 border border-rose-500/15' : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/15'
+                                    }`}>
+                                      {u.isSuspended ? 'Suspended' : 'Active'}
+                                    </span>
+                                  </td>
+                                  <td className="p-4 text-right" onClick={(e) => e.stopPropagation()}>
+                                    <div className="flex items-center justify-end space-x-2">
+                                      <button
+                                        onClick={() => setExpandedUserId(isExpanded ? null : u.id)}
+                                        className="text-[10px] font-bold py-1.5 px-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition cursor-pointer"
+                                      >
+                                        {isExpanded ? 'Hide Info' : 'View Profile'}
+                                      </button>
+                                      <button
+                                        onClick={() => handleToggleSuspension(u.id)}
+                                        className={`text-[10px] font-bold py-1.5 px-3 rounded-lg transition cursor-pointer ${
+                                          u.isSuspended 
+                                            ? 'bg-emerald-500/10 hover:bg-emerald-500 hover:text-slate-950 text-emerald-400'
+                                            : 'bg-rose-500/10 hover:bg-rose-500 hover:text-white text-rose-400'
+                                        }`}
+                                      >
+                                        {u.isSuspended ? 'Unblock' : 'Block'}
+                                      </button>
+                                    </div>
+                                  </td>
+                                </tr>
+                                
+                                {isExpanded && (
+                                  <tr className="bg-slate-950/80" onClick={(e) => e.stopPropagation()}>
+                                    <td colSpan={5} className="p-5 border-t border-b border-slate-850">
+                                      <div className="bg-slate-900/40 rounded-xl p-5 border border-slate-800 space-y-4 animate-fade-in text-xs">
+                                        <div className="flex flex-col md:flex-row gap-5 items-start">
+                                          {/* Profile Picture */}
+                                          <div className="w-24 h-24 rounded-xl overflow-hidden ring-2 ring-slate-800 bg-slate-950 shrink-0 self-center md:self-start">
+                                            <img
+                                              src={u.profileImage || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(u.name)}&backgroundColor=f59e0b&textColor=0f172a`}
+                                              alt={u.name}
+                                              referrerPolicy="no-referrer"
+                                              className="w-full h-full object-cover"
+                                            />
+                                          </div>
+                                          
+                                          {/* Profile Info */}
+                                          <div className="flex-1 space-y-3 w-full">
+                                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                                              <div>
+                                                <h4 className="text-base font-black text-white">{u.name}</h4>
+                                                <p className="text-xs text-slate-400 font-medium">Contact: {u.phone || 'No phone registered'} | Address: {u.address || 'No base address'}</p>
+                                              </div>
+                                              
+                                              {u.role === 'provider' && expDetails && (
+                                                <div className="flex items-center space-x-2">
+                                                  {expDetails.isVerified ? (
+                                                    <span className="text-[9px] font-mono font-black text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 py-1 px-2.5 rounded-lg uppercase">
+                                                      ✓ Verified Provider
+                                                    </span>
+                                                  ) : (
+                                                    <span className="text-[9px] font-mono font-black text-amber-500 bg-amber-500/10 border border-amber-500/20 py-1 px-2.5 rounded-lg uppercase animate-pulse">
+                                                      ⚠ Verification Pending
+                                                    </span>
+                                                  )}
+                                                </div>
+                                              )}
+                                            </div>
+                                            
+                                            {u.role === 'provider' && expDetails ? (
+                                              <div className="space-y-3.5">
+                                                {/* Bio */}
+                                                <div className="bg-slate-950 p-3 rounded-xl border border-slate-850">
+                                                  <p className="text-[10px] text-slate-500 uppercase font-mono font-bold tracking-wider mb-1">Provider Biography</p>
+                                                  <p className="text-xs text-slate-300 leading-relaxed italic">"{expDetails.bio || 'No bio written yet.'}"</p>
+                                                </div>
+                                                
+                                                {/* Stats grid */}
+                                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                                  <div className="bg-slate-950/60 p-2.5 rounded-xl border border-slate-850/60">
+                                                    <span className="text-[9px] text-slate-500 uppercase tracking-wider font-mono block">Category</span>
+                                                    <span className="text-xs font-bold text-amber-400 block mt-0.5">{expDetails.category}</span>
+                                                  </div>
+                                                  <div className="bg-slate-950/60 p-2.5 rounded-xl border border-slate-850/60">
+                                                    <span className="text-[9px] text-slate-500 uppercase tracking-wider font-mono block">Hourly Rate</span>
+                                                    <span className="text-xs font-black text-white font-mono block mt-0.5">₹{expDetails.rate}/hr</span>
+                                                  </div>
+                                                  <div className="bg-slate-950/60 p-2.5 rounded-xl border border-slate-850/60">
+                                                    <span className="text-[9px] text-slate-500 uppercase tracking-wider font-mono block">Performance</span>
+                                                    <span className="text-xs font-bold text-white font-mono block mt-0.5">⭐ {expDetails.rating || '5.0'} ({expDetails.ratingsCount || 0} reviews)</span>
+                                                  </div>
+                                                  <div className="bg-slate-950/60 p-2.5 rounded-xl border border-slate-850/60">
+                                                    <span className="text-[9px] text-slate-500 uppercase tracking-wider font-mono block">Completed Jobs / Earnings</span>
+                                                    <span className="text-xs font-bold text-emerald-400 font-mono block mt-0.5">{expDetails.completedJobs || 0} Jobs (₹{expDetails.earnings || 0})</span>
+                                                  </div>
+                                                </div>
+                                                
+                                                {/* Skills tags */}
+                                                {expDetails.skills && expDetails.skills.length > 0 && (
+                                                  <div>
+                                                    <p className="text-[10px] text-slate-500 uppercase font-mono font-bold tracking-wider mb-1.5">Expertise Tags & Skills</p>
+                                                    <div className="flex flex-wrap gap-1.5">
+                                                      {expDetails.skills.map((skill, sIdx) => (
+                                                        <span key={sIdx} className="bg-slate-950 text-slate-400 font-mono text-[9px] py-1 px-2.5 rounded-lg border border-slate-850 font-medium">
+                                                          #{skill}
+                                                        </span>
+                                                      ))}
+                                                    </div>
+                                                  </div>
+                                                )}
+                                                
+                                                {/* Pending action */}
+                                                {!expDetails.isVerified && (
+                                                  <div className="flex justify-end pt-1">
+                                                    <button
+                                                      onClick={() => handleApproveProvider(u.id)}
+                                                      className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-[10px] font-black py-2 px-4 rounded-xl transition cursor-pointer"
+                                                    >
+                                                      Verify & Approve Profile
+                                                    </button>
+                                                  </div>
+                                                )}
+                                              </div>
+                                            ) : (
+                                              <div className="p-3 bg-slate-950/60 rounded-xl border border-slate-850 text-slate-400 text-[11px]">
+                                                This account is registered as a <span className="text-blue-400 capitalize font-bold">{u.role}</span> member. Service provider metrics, earnings, and bio are only active for expert technician accounts.
+                                              </div>
+                                            )}
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                )}
+                              </React.Fragment>
+                            );
+                          })}
                         </tbody>
                       </table>
                     </div>
