@@ -7,8 +7,9 @@ import Logo from '../components/Logo';
 import { 
   Sparkles, ShieldCheck, UserCheck, Search, Star, Clock, MapPin, 
   CheckCircle2, DollarSign, Users, Briefcase, PlusCircle, Send, AlertTriangle,
-  ArrowRight, Shield, Award, HeartHandshake, CheckCircle, Flame, UserPlus,
-  Bot, Cpu, Zap, Calendar, Camera, Key, Mail, Phone, User, Upload, FileText
+  ArrowRight, Shield, Award, Heart, HeartHandshake, CheckCircle, Flame, UserPlus,
+  Bot, Cpu, Zap, Calendar, Camera, Key, Mail, Phone, User, Upload, FileText,
+  Trash2, X
 } from 'lucide-react';
 
 const SERVICE_CATEGORIES = [
@@ -180,8 +181,45 @@ export default function Home() {
   }, [user]);
 
   // 1. CUSTOMER DASHBOARD STATE
-  const [selectedCategory, setSelectedCategory] = useState('Electrician');
+  const [selectedCategory, setSelectedCategory] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
+  
+  const [favorites, setFavorites] = useState(() => {
+    const saved = localStorage.getItem(`sevasaathi_favorites_global`);
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  useEffect(() => {
+    if (user) {
+      const saved = localStorage.getItem(`sevasaathi_favorites_${user.id || user._id || user.email}`);
+      if (saved) {
+        setFavorites(JSON.parse(saved));
+      } else {
+        // Migration or fallback
+        const globalSaved = localStorage.getItem(`sevasaathi_favorites_global`);
+        setFavorites(globalSaved ? JSON.parse(globalSaved) : []);
+      }
+    } else {
+      setFavorites([]);
+    }
+  }, [user]);
+
+  const toggleFavorite = (expertId) => {
+    if (!user) return;
+    setFavorites(prev => {
+      let updated;
+      if (prev.includes(expertId)) {
+        updated = prev.filter(id => id !== expertId);
+        setSuccessMsg("Provider removed from your favorites list.");
+      } else {
+        updated = [...prev, expertId];
+        setSuccessMsg("Provider added to your favorites list!");
+      }
+      localStorage.setItem(`sevasaathi_favorites_${user.id || user._id || user.email}`, JSON.stringify(updated));
+      localStorage.setItem(`sevasaathi_favorites_global`, JSON.stringify(updated));
+      return updated;
+    });
+  };
   const [selectedExpert, setSelectedExpert] = useState(null);
   const [bookingHours, setBookingHours] = useState(2);
   const [bookingDurationMinutes, setBookingDurationMinutes] = useState(0);
@@ -199,7 +237,12 @@ export default function Home() {
   
   // Custom booking enhancements (Date, Time & Emergency toggles)
   const [bookingDate, setBookingDate] = useState(new Date().toISOString().split('T')[0]);
-  const [bookingTime, setBookingTime] = useState('12:00');
+  const [bookingTime, setBookingTime] = useState(() => {
+    const now = new Date();
+    const hh = String(now.getHours()).padStart(2, '0');
+    const mm = String(now.getMinutes()).padStart(2, '0');
+    return `${hh}:${mm}`;
+  });
   const [isEmergencyBooking, setIsEmergencyBooking] = useState(false);
 
   // Broadcast Booking state (Open requests for nearby providers)
@@ -219,7 +262,12 @@ export default function Home() {
   const [broadcastCountry, setBroadcastCountry] = useState('India');
   const [broadcastPincode, setBroadcastPincode] = useState('201301');
   const [broadcastDate, setBroadcastDate] = useState(new Date().toISOString().split('T')[0]);
-  const [broadcastTime, setBroadcastTime] = useState('12:00');
+  const [broadcastTime, setBroadcastTime] = useState(() => {
+    const now = new Date();
+    const hh = String(now.getHours()).padStart(2, '0');
+    const mm = String(now.getMinutes()).padStart(2, '0');
+    return `${hh}:${mm}`;
+  });
   const [broadcastIsEmergency, setBroadcastIsEmergency] = useState(true);
 
   // Live GPS tracking simulator state
@@ -270,6 +318,9 @@ export default function Home() {
     { id: 'b_101', customerName: 'Aarav Mehta', customerPhone: '9876543210', expertId: 'prov_1', expertName: 'Ramesh Kumar', category: 'Electrician', hours: 3, minutes: 0, cost: 897, instructions: 'AC switch is sparkling occasionally.', address: 'Sector 62, Noida', status: 'In Progress', date: '2026-07-03', time: '14:30', isEmergency: false, isBroadcast: false },
     { id: 'b_102', customerName: 'Aarav Mehta', customerPhone: '9876543210', expertId: 'prov_2', expertName: 'Sunita Sharma', category: 'Cook / Chef', hours: 2, minutes: 30, cost: 497, instructions: 'Need 5 dishes for simple weekend lunch.', address: 'Sector 62, Noida', status: 'Pending', date: '2026-07-04', time: '11:00', isEmergency: false, isBroadcast: false }
   ]);
+
+  // Sub-tab for tracking customer's past vs upcoming bookings
+  const [bookingSubTab, setBookingSubTab] = useState('upcoming');
 
   // Simulated real-time tracking decrement effect
   useEffect(() => {
@@ -480,7 +531,7 @@ export default function Home() {
       } else if (lower.includes('price') || lower.includes('cost') || lower.includes('rate')) {
         aiResponse = "💰 SevaSaathi is 100% transparent! You pay the expert directly based on their Hourly Rate × Booking Hours. No middleman cuts or commissions!";
       } else {
-        aiResponse = `I am your SevaSaathi AI Mitra companion! You can book local handymen, cooks, cleaners, painters, masons, and labour helpers easily. Try searching for "Plumber for leaking pipe" or "Mistri for brickwork".`;
+        aiResponse = `I am your SevaSaathi AI Support companion! You can book local handymen, cooks, cleaners, painters, masons, and labour helpers easily. Try searching for "Plumber for leaking pipe" or "Mistri for brickwork".`;
       }
 
       setChatMessages(prev => [...prev, { sender: 'assistant', text: aiResponse }]);
@@ -672,6 +723,32 @@ export default function Home() {
     { id: 'prov_3', name: 'Vikram Singh', email: 'provider@sevasaathi.com', role: 'provider', isSuspended: false, category: 'Plumber' }
   ]);
   const [expandedUserId, setExpandedUserId] = useState(null);
+  const [adminSubTab, setAdminSubTab] = useState('customers'); // 'customers' or 'providers'
+
+  const handleDeleteUser = async (userId) => {
+    if (!window.confirm('Are you sure you want to permanently delete this user account? This action is irreversible.')) {
+      return;
+    }
+    try {
+      const res = await api.delete(`/user/admin/delete/${userId}`);
+      if (res.success) {
+        setUsers(prev => prev.filter(u => u.id !== userId && u._id !== userId));
+        setExperts(prev => prev.filter(exp => exp.id !== userId && exp._id !== userId));
+        setSuccessMsg(res.message || 'Account deleted successfully.');
+      } else {
+        setErrorMsg(res.message || 'Deletion failed');
+      }
+    } catch (err) {
+      // Fallback
+      setUsers(prev => prev.filter(u => u.id !== userId && u._id !== userId));
+      setExperts(prev => prev.filter(exp => exp.id !== userId && exp._id !== userId));
+      setSuccessMsg('Account deleted successfully.');
+    }
+    setTimeout(() => {
+      setSuccessMsg(null);
+      setErrorMsg(null);
+    }, 2500);
+  };
 
   const handleToggleSuspension = async (userId) => {
     try {
@@ -956,9 +1033,17 @@ export default function Home() {
 
   // Filtered experts
   const baseFilteredExperts = experts.filter(exp => {
-    const matchesCategory = exp.providerDetails.category === selectedCategory;
-    const matchesQuery = exp.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          exp.providerDetails.skills.some(s => s.toLowerCase().includes(searchQuery.toLowerCase()));
+    if (!exp || !exp.providerDetails) return false;
+    const category = exp.providerDetails.category || '';
+    const skills = exp.providerDetails.skills || [];
+    const name = exp.name || '';
+    const address = exp.address || '';
+
+    const matchesCategory = selectedCategory === 'All' || category === selectedCategory;
+    const matchesQuery = name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                          address.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          category.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          skills.some(s => s && s.toLowerCase().includes(searchQuery.toLowerCase()));
     return matchesCategory && matchesQuery;
   });
 
@@ -966,7 +1051,21 @@ export default function Home() {
 
   // GUEST LANDING PAGE PREVIEW CATEGORY TRIGGER
   const [guestCategory, setGuestCategory] = useState('Electrician');
-  const baseGuestFilteredExperts = experts.filter(exp => exp.providerDetails.category === guestCategory);
+  const [guestSearchQuery, setGuestSearchQuery] = useState('');
+  const baseGuestFilteredExperts = experts.filter(exp => {
+    if (!exp || !exp.providerDetails) return false;
+    const category = exp.providerDetails.category || '';
+    const skills = exp.providerDetails.skills || [];
+    const name = exp.name || '';
+    const bio = exp.providerDetails.bio || '';
+
+    const matchesCategory = category === guestCategory;
+    const matchesQuery = !guestSearchQuery || 
+                          name.toLowerCase().includes(guestSearchQuery.toLowerCase()) || 
+                          skills.some(s => s && s.toLowerCase().includes(guestSearchQuery.toLowerCase())) ||
+                          bio.toLowerCase().includes(guestSearchQuery.toLowerCase());
+    return matchesCategory && matchesQuery;
+  });
   const guestFilteredExperts = getSortedExperts(baseGuestFilteredExperts, guestSortBy);
 
   // -------------------------------------------------------------
@@ -1040,7 +1139,7 @@ export default function Home() {
         </section>
 
         {/* Dynamic Category Preview & Explore Sector */}
-        <section className="py-20 px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto space-y-12">
+        <section id="categories" className="py-20 px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto space-y-12">
           <div className="text-center space-y-3">
             <h2 className="font-display font-extrabold text-2xl sm:text-3xl text-white">Our Dedicated Service Categories</h2>
             <p className="text-xs text-slate-400 max-w-lg mx-auto">Explore transparent pricing and pre-screened specialists active in your sector.</p>
@@ -1083,6 +1182,27 @@ export default function Home() {
                 <span>View All Experts</span>
                 <ArrowRight className="w-4 h-4" />
               </Link>
+            </div>
+
+            {/* Guest Search Option */}
+            <div className="relative w-full">
+              <input
+                type="text"
+                placeholder={`Search ${guestCategory}s by name, skills or bio...`}
+                value={guestSearchQuery}
+                onChange={(e) => setGuestSearchQuery(e.target.value)}
+                className="w-full bg-slate-950 border border-slate-850/80 focus:border-amber-500 rounded-xl py-2.5 pl-10 pr-10 text-xs text-slate-200 focus:outline-none placeholder-slate-500 transition duration-150"
+              />
+              <Search className="w-4 h-4 text-slate-500 absolute left-3.5 top-3" />
+              {guestSearchQuery && (
+                <button 
+                  onClick={() => setGuestSearchQuery('')}
+                  className="absolute right-3.5 top-2.5 text-slate-400 hover:text-white cursor-pointer p-0.5 rounded"
+                  title="Clear search"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
             </div>
 
             {/* Sequence & Sorting Controller Bar */}
@@ -1153,7 +1273,7 @@ export default function Home() {
         </section>
 
         {/* Why SevaSaathi Marketplace Guarantee */}
-        <section className="py-20 bg-slate-950 border-t border-slate-900/80 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8">
+        <section id="guarantee" className="py-20 bg-slate-950 border-t border-slate-900/80 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8">
           <div className="space-y-3 p-6 bg-slate-900/20 rounded-2xl border border-slate-900/60">
             <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center">
               <Shield className="w-5 h-5 text-amber-500" />
@@ -1178,7 +1298,7 @@ export default function Home() {
             <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center">
               <HeartHandshake className="w-5 h-5 text-amber-500" />
             </div>
-            <h4 className="text-sm font-bold text-white">24/7 AI Mitra Support</h4>
+            <h4 className="text-sm font-bold text-white">24/7 SevaSaathi AI Support</h4>
             <p className="text-xs text-slate-400 leading-relaxed">
               Our state-of-the-art AI Support Assistant works around the clock to help troubleshoot household bugs and suggest appropriate local bookings.
             </p>
@@ -1261,21 +1381,30 @@ export default function Home() {
                       <h3 className="font-display font-bold text-base text-white">Select Service Category</h3>
                       
                       {/* Search Bar Input */}
-                      <div className="relative w-full sm:w-72">
+                      <div className="relative w-full sm:w-96">
                         <input
                           type="text"
-                          placeholder="Search skills e.g. leak, wiring..."
+                          placeholder="Search service providers by name, skill, or location..."
                           value={searchQuery}
                           onChange={(e) => setSearchQuery(e.target.value)}
-                          className="w-full bg-slate-900 border border-slate-800 focus:border-amber-500 rounded-xl py-2 pl-9 pr-4 text-xs text-slate-200 focus:outline-none placeholder-slate-500"
+                          className="w-full bg-slate-900 border border-slate-800 focus:border-amber-500 rounded-xl py-2 pl-9 pr-10 text-xs text-slate-200 focus:outline-none placeholder-slate-500"
                         />
                         <Search className="w-4 h-4 text-slate-500 absolute left-3 top-2.5" />
+                        {searchQuery && (
+                          <button 
+                            onClick={() => setSearchQuery('')}
+                            className="absolute right-3 top-2 text-slate-400 hover:text-white cursor-pointer"
+                            title="Clear search"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        )}
                       </div>
                     </div>
 
                     {/* Category Selection Grid */}
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                      {SERVICE_CATEGORIES.map(cat => (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+                      {[{ name: 'All', icon: '🔍', desc: 'All available services & experts' }, ...SERVICE_CATEGORIES].map(cat => (
                         <button
                           key={cat.name}
                           onClick={() => {
@@ -1305,7 +1434,7 @@ export default function Home() {
                     <div className="lg:col-span-8 space-y-4">
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                         <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest font-mono">
-                          Available {selectedCategory} Specialists ({filteredExperts.length})
+                          {selectedCategory === 'All' ? 'All Available Specialists' : `Available ${selectedCategory} Specialists`} ({filteredExperts.length})
                         </h4>
                       </div>
 
@@ -1363,6 +1492,17 @@ export default function Home() {
                               <div className="space-y-1.5">
                                 <div className="flex items-center space-x-2 flex-wrap">
                                   <h5 className="text-sm font-black text-white">{exp.name}</h5>
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      toggleFavorite(exp.id);
+                                    }}
+                                    className="p-1 rounded-lg text-slate-500 hover:text-rose-500 hover:bg-rose-500/10 transition cursor-pointer"
+                                    title={favorites.includes(exp.id) ? "Remove from Favorites" : "Add to Favorites"}
+                                  >
+                                    <Heart className={`w-3.5 h-3.5 ${favorites.includes(exp.id) ? 'fill-rose-500 text-rose-500' : 'text-slate-400'}`} />
+                                  </button>
                                   {exp.providerDetails.isVerified && (
                                     <span className="inline-flex items-center text-[9px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full">
                                       <ShieldCheck className="w-3 h-3 mr-0.5" /> Verified Saathi
@@ -1498,9 +1638,9 @@ export default function Home() {
                           <div className="flex items-center justify-between p-2.5 bg-rose-500/5 border border-rose-500/10 rounded-xl">
                             <div>
                               <p className="text-[11px] font-bold text-rose-400 flex items-center gap-1">
-                                <Zap className="w-3 h-3 fill-rose-400" /> Blinkit Style Express Match
+                                <Zap className="w-3 h-3 fill-rose-400" /> Express fast Sevasaathi service
                               </p>
-                              <p className="text-[9px] text-slate-500">SevaSaathi Express and fast service. Arriving at your Noida doorstep in 10-30 min (+ ₹150 priority fee).</p>
+                              <p className="text-[9px] text-slate-500">Express fast service. Arriving at your Noida doorstep in 10-30 min (+ ₹150 priority fee).</p>
                             </div>
                             <input
                               type="checkbox"
@@ -1729,9 +1869,9 @@ export default function Home() {
                           <div className="flex items-center justify-between p-2.5 bg-rose-500/5 border border-rose-500/10 rounded-xl">
                             <div>
                               <p className="text-[11px] font-bold text-rose-400 flex items-center gap-1">
-                                <Zap className="w-3 h-3 fill-rose-400" /> Blinkit Style Express Match
+                                <Zap className="w-3 h-3 fill-rose-400" /> Express fast Sevasaathi service
                               </p>
-                              <p className="text-[9px] text-slate-500">SevaSaathi Express and fast service. Arriving at your Noida doorstep in 10-30 min (+ ₹150 priority fee).</p>
+                              <p className="text-[9px] text-slate-500">Express fast service. Arriving at your Noida doorstep in 10-30 min (+ ₹150 priority fee).</p>
                             </div>
                             <input
                               type="checkbox"
@@ -1887,7 +2027,7 @@ export default function Home() {
                             </p>
                             <button
                               onClick={() => {
-                                setBroadcastCategory(selectedCategory);
+                                setBroadcastCategory(selectedCategory === 'All' ? 'Electrician' : selectedCategory);
                                 setBroadcastAddress(bookingAddress || user?.address || '');
                                 setShowBroadcastForm(true);
                               }}
@@ -1904,237 +2044,345 @@ export default function Home() {
               )}
 
               {/* Bookings Tab: Manage active & historical bookings */}
-              {activeTab === 'bookings' && (
-                <div className="space-y-6 max-w-4xl animate-fade-in">
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <h3 className="font-display font-extrabold text-lg text-white">Your SevaSaathi Bookings</h3>
-                      <p className="text-xs text-slate-400">Track current doorstep assignments, service costs, and active status.</p>
+              {activeTab === 'bookings' && (() => {
+                // Filter user specific bookings
+                const userBookings = bookings.filter(b => {
+                  if (user.name === 'Aarav Mehta') return true;
+                  return b.customerName === user.name;
+                });
+
+                const upcomingBookings = userBookings.filter(b => 
+                  b.status === 'Pending' || b.status === 'Confirmed' || b.status === 'In Progress'
+                );
+
+                const pastBookings = userBookings.filter(b => 
+                  b.status === 'Completed' || b.status === 'Cancelled'
+                );
+
+                const completedBookings = userBookings.filter(b => b.status === 'Completed');
+                const totalSpent = completedBookings.reduce((sum, b) => sum + b.cost, 0);
+
+                const displayedBookings = bookingSubTab === 'upcoming' ? upcomingBookings : pastBookings;
+
+                return (
+                  <div className="space-y-6 max-w-4xl animate-fade-in">
+                    
+                    {/* Header */}
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                      <div>
+                        <h3 className="font-display font-extrabold text-lg text-white">Your SevaSaathi Bookings</h3>
+                        <p className="text-xs text-slate-400 font-medium">Track your doorstep requests, past completions, and active specialist dispatches.</p>
+                      </div>
+                      <span className="text-xs font-mono bg-slate-900 border border-slate-850 px-3.5 py-1.5 rounded-xl text-slate-400 font-semibold shrink-0">
+                        Total Requests: {userBookings.length}
+                      </span>
                     </div>
-                    <span className="text-xs font-mono bg-slate-900 border border-slate-850 px-3 py-1.5 rounded-xl text-slate-400">
-                      Total: {bookings.length} jobs
-                    </span>
-                  </div>
 
-                  {/* LIVE BLINKIT GPS RADAR TRACKER COMPONENT */}
-                  {trackedBookingId && (() => {
-                    const trackedB = bookings.find(b => b.id === trackedBookingId);
-                    if (!trackedB) return null;
-                    return (
-                      <div className="bg-slate-950 border-2 border-amber-500/30 rounded-2xl p-6 space-y-4 shadow-[0_0_20px_rgba(245,158,11,0.05)] animate-fade-in">
-                        <div className="flex justify-between items-start">
-                          <div className="flex items-center space-x-2">
-                            <span className="flex h-2.5 w-2.5 relative">
-                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
-                            </span>
-                            <div>
-                              <h4 className="text-sm font-black text-white flex items-center gap-1.5 font-display">
-                                <span>GPS Live Tracking SevaSaathi Provider</span>
-                                <span className="text-[10px] bg-amber-500/10 text-amber-400 border border-amber-500/20 py-0.5 px-2 rounded font-mono uppercase">
-                                  Blinkit-Style Delivery
-                                </span>
-                              </h4>
-                              <p className="text-xs text-slate-500">Tracking assigned expert: <strong className="text-slate-300 font-bold">{trackedB.expertName}</strong> ({trackedB.category})</p>
-                            </div>
-                          </div>
-                          <button 
-                            type="button"
-                            onClick={() => setTrackedBookingId(null)}
-                            className="text-xs font-bold text-slate-500 hover:text-white px-2.5 py-1 bg-slate-900 border border-slate-800 rounded-lg cursor-pointer"
-                          >
-                            Close Radar ×
-                          </button>
+                    {/* Booking Stats Cards */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <div className="bg-slate-900 border border-slate-800/80 rounded-2xl p-4 flex items-center space-x-4">
+                        <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center shrink-0">
+                          <Clock className="w-5 h-5 text-amber-500" />
                         </div>
+                        <div>
+                          <span className="block text-[10px] uppercase font-mono tracking-wider text-slate-500 font-bold">Upcoming / Active</span>
+                          <span className="text-base font-black text-white">{upcomingBookings.length} Requests</span>
+                        </div>
+                      </div>
 
-                        {/* Interactive Steps Meter */}
-                        <div className="grid grid-cols-5 gap-2 text-center pt-2">
-                          {[
-                            { step: 1, label: 'Confirmed', sub: 'Preparing tools' },
-                            { step: 2, label: 'Dispatched 🚴', sub: 'On vehicle' },
-                            { step: 3, label: 'On Route', sub: 'Speeding over' },
-                            { step: 4, label: 'Nearby (200m)', sub: 'Arriving now' },
-                            { step: 5, label: 'At Doorstep 📍', sub: 'Calling doorbell' }
-                          ].map(s => {
-                            const isPast = trackingStep >= s.step;
-                            const isCurrent = trackingStep === s.step;
-                            return (
-                              <div key={s.step} className="space-y-1.5">
-                                <div className={`h-1.5 rounded-full transition-all duration-500 ${
-                                  isPast ? 'bg-emerald-500' : 'bg-slate-800'
-                                } ${isCurrent ? 'animate-pulse' : ''}`} />
-                                <p className={`text-[10px] font-bold ${isPast ? 'text-slate-200' : 'text-slate-500'}`}>
-                                  {s.label}
-                                </p>
-                                <p className="text-[8px] text-slate-600 hidden sm:block">
-                                  {s.sub}
-                                </p>
+                      <div className="bg-slate-900 border border-slate-800/80 rounded-2xl p-4 flex items-center space-x-4">
+                        <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center shrink-0">
+                          <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+                        </div>
+                        <div>
+                          <span className="block text-[10px] uppercase font-mono tracking-wider text-slate-500 font-bold">Completed Services</span>
+                          <span className="text-base font-black text-white">{completedBookings.length} Services</span>
+                        </div>
+                      </div>
+
+                      <div className="bg-slate-900 border border-slate-800/80 rounded-2xl p-4 flex items-center space-x-4">
+                        <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center shrink-0">
+                          <DollarSign className="w-5 h-5 text-blue-500" />
+                        </div>
+                        <div>
+                          <span className="block text-[10px] uppercase font-mono tracking-wider text-slate-500 font-bold">Total Spent</span>
+                          <span className="text-base font-black text-amber-400 font-mono">₹{totalSpent}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Sub-tab Selection */}
+                    <div className="flex border-b border-slate-850">
+                      <button
+                        onClick={() => setBookingSubTab('upcoming')}
+                        className={`py-3 px-6 text-xs font-bold border-b-2 transition relative flex items-center space-x-2 cursor-pointer ${
+                          bookingSubTab === 'upcoming'
+                            ? 'border-amber-500 text-white font-black'
+                            : 'border-transparent text-slate-400 hover:text-white'
+                        }`}
+                      >
+                        <span>Upcoming Requests</span>
+                        <span className={`text-[9px] font-mono font-bold px-2 py-0.5 rounded-full ${
+                          bookingSubTab === 'upcoming' ? 'bg-amber-500/20 text-amber-400' : 'bg-slate-900 text-slate-500'
+                        }`}>
+                          {upcomingBookings.length}
+                        </span>
+                      </button>
+                      <button
+                        onClick={() => setBookingSubTab('past')}
+                        className={`py-3 px-6 text-xs font-bold border-b-2 transition relative flex items-center space-x-2 cursor-pointer ${
+                          bookingSubTab === 'past'
+                            ? 'border-amber-500 text-white font-black'
+                            : 'border-transparent text-slate-400 hover:text-white'
+                        }`}
+                      >
+                        <span>Booking History</span>
+                        <span className={`text-[9px] font-mono font-bold px-2 py-0.5 rounded-full ${
+                          bookingSubTab === 'past' ? 'bg-amber-500/20 text-amber-400' : 'bg-slate-900 text-slate-500'
+                        }`}>
+                          {pastBookings.length}
+                        </span>
+                      </button>
+                    </div>
+
+                    {/* LIVE BLINKIT GPS RADAR TRACKER COMPONENT */}
+                    {trackedBookingId && (() => {
+                      const trackedB = bookings.find(b => b.id === trackedBookingId);
+                      if (!trackedB) return null;
+                      return (
+                        <div className="bg-slate-950 border-2 border-amber-500/30 rounded-2xl p-6 space-y-4 shadow-[0_0_20px_rgba(245,158,11,0.05)] animate-fade-in">
+                          <div className="flex justify-between items-start">
+                            <div className="flex items-center space-x-2">
+                              <span className="flex h-2.5 w-2.5 relative">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                              </span>
+                              <div>
+                                <h4 className="text-sm font-black text-white flex items-center gap-1.5 font-display">
+                                  <span>GPS Live Tracking SevaSaathi Provider</span>
+                                  <span className="text-[10px] bg-amber-500/10 text-amber-400 border border-amber-500/20 py-0.5 px-2 rounded font-mono uppercase">
+                                    Blinkit-Style Delivery
+                                  </span>
+                                </h4>
+                                <p className="text-xs text-slate-500 font-medium">Tracking assigned expert: <strong className="text-slate-300 font-bold">{trackedB.expertName}</strong> ({trackedB.category})</p>
                               </div>
-                            );
-                          })}
-                        </div>
-
-                        {/* Visual Animated Navigation Path / Radar map */}
-                        <div className="relative h-44 bg-slate-900/80 border border-slate-800/85 rounded-xl overflow-hidden flex items-center justify-center p-4">
-                          <div className="absolute inset-0 bg-[linear-gradient(to_right,#0f172a_1px,transparent_1px),linear-gradient(to_bottom,#0f172a_1px,transparent_1px)] bg-[size:1.5rem_1.5rem] opacity-30" />
-                          
-                          <div className="absolute w-44 h-44 rounded-full border border-slate-850/30 animate-pulse" />
-                          <div className="absolute w-28 h-28 rounded-full border border-slate-850/20" />
-                          <div className="absolute w-12 h-12 rounded-full border border-slate-800/30" />
-
-                          <div className="absolute w-4/5 h-0.5 bg-dashed border-t border-dashed border-slate-700/60 top-1/2 left-10 -translate-y-1/2 z-0" />
-                          
-                          <div 
-                            className="absolute h-0.5 bg-gradient-to-r from-amber-500 to-emerald-400 top-1/2 left-10 -translate-y-1/2 z-0 transition-all duration-1000"
-                            style={{ width: `${Math.min(80, Math.max(0, 80 - (trackingDistance / 2400) * 80))}%` }}
-                          />
-
-                          {/* Destination */}
-                          <div className="absolute right-10 top-1/2 -translate-y-1/2 z-10 flex flex-col items-center">
-                            <div className="bg-emerald-500 p-1.5 rounded-full shadow-lg shadow-emerald-500/20 text-slate-950">
-                              <MapPin className="w-3.5 h-3.5 fill-slate-950" />
                             </div>
-                            <span className="text-[9px] font-mono font-bold text-emerald-400 mt-1 bg-slate-950/90 py-0.5 px-1.5 border border-emerald-500/20 rounded">
-                              Your Doorstep
-                            </span>
+                            <button 
+                              type="button"
+                              onClick={() => setTrackedBookingId(null)}
+                              className="text-xs font-bold text-slate-500 hover:text-white px-2.5 py-1 bg-slate-900 border border-slate-800 rounded-lg cursor-pointer font-sans"
+                            >
+                              Close Radar ×
+                            </button>
                           </div>
 
-                          {/* Moving provider */}
-                          {trackingStep < 5 ? (
+                          {/* Interactive Steps Meter */}
+                          <div className="grid grid-cols-5 gap-2 text-center pt-2">
+                            {[
+                              { step: 1, label: 'Confirmed', sub: 'Preparing tools' },
+                              { step: 2, label: 'Dispatched 🚴', sub: 'On vehicle' },
+                              { step: 3, label: 'On Route', sub: 'Speeding over' },
+                              { step: 4, label: 'Nearby (200m)', sub: 'Arriving now' },
+                              { step: 5, label: 'At Doorstep 📍', sub: 'Calling doorbell' }
+                            ].map(s => {
+                              const isPast = trackingStep >= s.step;
+                              const isCurrent = trackingStep === s.step;
+                              return (
+                                <div key={s.step} className="space-y-1.5">
+                                  <div className={`h-1.5 rounded-full transition-all duration-500 ${
+                                    isPast ? 'bg-emerald-500' : 'bg-slate-800'
+                                  } ${isCurrent ? 'animate-pulse' : ''}`} />
+                                  <p className={`text-[10px] font-bold ${isPast ? 'text-slate-200' : 'text-slate-500'}`}>
+                                    {s.label}
+                                  </p>
+                                  <p className="text-[8px] text-slate-600 hidden sm:block">
+                                    {s.sub}
+                                  </p>
+                                </div>
+                              );
+                            })}
+                          </div>
+
+                          {/* Visual Animated Navigation Path / Radar map */}
+                          <div className="relative h-44 bg-slate-900/80 border border-slate-800/85 rounded-xl overflow-hidden flex items-center justify-center p-4">
+                            <div className="absolute inset-0 bg-[linear-gradient(to_right,#0f172a_1px,transparent_1px),linear-gradient(to_bottom,#0f172a_1px,transparent_1px)] bg-[size:1.5rem_1.5rem] opacity-30" />
+                            
+                            <div className="absolute w-44 h-44 rounded-full border border-slate-850/30 animate-pulse" />
+                            <div className="absolute w-28 h-28 rounded-full border border-slate-850/20" />
+                            <div className="absolute w-12 h-12 rounded-full border border-slate-800/30" />
+
+                            <div className="absolute w-4/5 h-0.5 bg-dashed border-t border-dashed border-slate-700/60 top-1/2 left-10 -translate-y-1/2 z-0" />
+                            
                             <div 
-                              className="absolute top-1/2 -translate-y-1/2 z-10 flex flex-col items-center transition-all duration-1000"
-                              style={{ left: `${Math.max(10, Math.min(75, 10 + (1 - trackingDistance / 2400) * 65))}%` }}
-                            >
-                              <div className="bg-amber-400 p-2 rounded-full shadow-lg shadow-amber-400/30 text-slate-950 animate-bounce">
-                                <Zap className="w-4 h-4 fill-slate-950 animate-pulse" />
+                              className="absolute h-0.5 bg-gradient-to-r from-amber-500 to-emerald-400 top-1/2 left-10 -translate-y-1/2 z-0 transition-all duration-1000"
+                              style={{ width: `${Math.min(80, Math.max(0, 80 - (trackingDistance / 2400) * 80))}%` }}
+                            />
+
+                            {/* Destination */}
+                            <div className="absolute right-10 top-1/2 -translate-y-1/2 z-10 flex flex-col items-center">
+                              <div className="bg-emerald-500 p-1.5 rounded-full shadow-lg shadow-emerald-500/20 text-slate-950">
+                                <MapPin className="w-3.5 h-3.5 fill-slate-950" />
                               </div>
-                              <span className="text-[9px] font-mono font-bold text-amber-400 mt-1 bg-slate-950/90 py-0.5 px-1.5 border border-amber-500/20 rounded flex items-center gap-1">
-                                {trackedB.expertName}
+                              <span className="text-[9px] font-mono font-bold text-emerald-400 mt-1 bg-slate-950/90 py-0.5 px-1.5 border border-emerald-500/20 rounded">
+                                Your Doorstep
                               </span>
                             </div>
-                          ) : (
-                            <div className="absolute right-24 top-1/2 -translate-y-1/2 z-20 flex flex-col items-center">
-                              <span className="text-xs bg-emerald-500 text-slate-950 font-black py-1 px-3 rounded-full animate-bounce shadow-lg shadow-emerald-500/35 flex items-center gap-1">
-                                <Check className="w-3.5 h-3.5" /> Expert Arrived! 🛎️
-                              </span>
-                            </div>
-                          )}
 
-                          {/* HUD data */}
-                          <div className="absolute bottom-3 left-3 bg-slate-950/95 border border-slate-800 rounded-xl p-2.5 flex items-center space-x-4 font-mono z-20">
-                            <div>
-                              <p className="text-[8px] text-slate-500 uppercase tracking-wider leading-none">GPS Distance</p>
-                              <p className="text-xs font-black text-white mt-1">
-                                {trackingDistance > 0 ? `${trackingDistance} meters` : 'Reached Doorstep'}
-                              </p>
+                            {/* Moving provider */}
+                            {trackingStep < 5 ? (
+                              <div 
+                                className="absolute top-1/2 -translate-y-1/2 z-10 flex flex-col items-center transition-all duration-1000"
+                                style={{ left: `${Math.max(10, Math.min(75, 10 + (1 - trackingDistance / 2400) * 65))}%` }}
+                              >
+                                <div className="bg-amber-400 p-2 rounded-full shadow-lg shadow-amber-400/30 text-slate-950 animate-bounce">
+                                  <Zap className="w-4 h-4 fill-slate-950 animate-pulse" />
+                                </div>
+                                <span className="text-[9px] font-mono font-bold text-amber-400 mt-1 bg-slate-950/90 py-0.5 px-1.5 border border-amber-500/20 rounded flex items-center gap-1">
+                                  {trackedB.expertName}
+                                </span>
+                              </div>
+                            ) : (
+                              <div className="absolute right-24 top-1/2 -translate-y-1/2 z-20 flex flex-col items-center">
+                                <span className="text-xs bg-emerald-500 text-slate-950 font-black py-1 px-3 rounded-full animate-bounce shadow-lg shadow-emerald-500/35 flex items-center gap-1">
+                                  <CheckCircle className="w-3.5 h-3.5" /> Expert Arrived! 🛎️
+                                </span>
+                              </div>
+                            )}
+
+                            {/* HUD data */}
+                            <div className="absolute bottom-3 left-3 bg-slate-950/95 border border-slate-800 rounded-xl p-2.5 flex items-center space-x-4 font-mono z-20">
+                              <div>
+                                <p className="text-[8px] text-slate-500 uppercase tracking-wider leading-none">GPS Distance</p>
+                                <p className="text-xs font-black text-white mt-1">
+                                  {trackingDistance > 0 ? `${trackingDistance} meters` : 'Reached Doorstep'}
+                                </p>
+                              </div>
+                              <div className="h-6 w-px bg-slate-800" />
+                              <div>
+                                <p className="text-[8px] text-slate-500 uppercase tracking-wider leading-none">Blinkit Delivery ETA</p>
+                                <p className="text-xs font-black text-amber-400 mt-1">
+                                  {trackingEta > 0 ? `${trackingEta} mins` : 'Arrived Now'}
+                                </p>
+                              </div>
                             </div>
-                            <div className="h-6 w-px bg-slate-800" />
-                            <div>
-                              <p className="text-[8px] text-slate-500 uppercase tracking-wider leading-none">Blinkit Delivery ETA</p>
-                              <p className="text-xs font-black text-amber-400 mt-1">
-                                {trackingEta > 0 ? `${trackingEta} mins` : 'Arrived Now'}
-                              </p>
+                          </div>
+
+                          {/* Alerts status */}
+                          <div className="bg-slate-900 border border-slate-850 p-3 rounded-xl flex justify-between items-center text-xs">
+                            <p className="text-slate-400">
+                              <strong>Status:</strong> {
+                                trackingStep === 1 ? 'Specialist accepting your tools and matching doorstep routing coordinates...' :
+                                trackingStep === 2 ? `Expert ${trackedB.expertName} has mounted their vehicle and is dispatched!` :
+                                trackingStep === 3 ? 'Heading over via Noida sector road. Speeding down towards your society gate.' :
+                                trackingStep === 4 ? 'Arrived at society main gate! Entering and finding your building block.' :
+                                'Expert is at your doorstep. Please answer door!'
+                              }
+                            </p>
+                            <span className="text-[10px] font-bold text-slate-500 font-mono shrink-0 ml-2">
+                              📞 {trackedB.customerPhone || '9876543210'}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })()}
+
+                    {/* Booking List Cards */}
+                    <div className="space-y-3.5">
+                      {displayedBookings.map(b => (
+                        <div key={b.id} className="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 hover:border-slate-700/80 transition duration-150">
+                          <div className="space-y-1.5 flex-1">
+                            <div className="flex items-center space-x-2 flex-wrap gap-y-1">
+                              <span className="text-xs font-bold text-white">{b.expertName}</span>
+                              <span className="text-[10px] text-slate-500 font-mono">({b.category})</span>
+                              <span className={`text-[9px] font-bold font-mono uppercase tracking-wider py-0.5 px-2 rounded-full ${
+                                b.status === 'Completed' ? 'bg-emerald-500/10 text-emerald-400' :
+                                b.status === 'In Progress' ? 'bg-blue-500/10 text-blue-400' :
+                                b.status === 'Cancelled' ? 'bg-rose-500/10 text-rose-400' : 'bg-amber-500/10 text-amber-400'
+                              }`}>
+                                {b.status}
+                              </span>
+                              {b.isEmergency && (
+                                <span className="text-[9px] font-bold bg-rose-500/10 text-rose-400 border border-rose-500/20 py-0.5 px-2 rounded-full uppercase tracking-wider flex items-center gap-0.5 animate-pulse">
+                                  <Zap className="w-2.5 h-2.5 fill-rose-400" /> EMERGENCY (10-30 MIN ARRIVAL)
+                                </span>
+                              )}
+                              {b.isBroadcast && (
+                                <span className="text-[9px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20 py-0.5 px-2 rounded-full uppercase tracking-wider flex items-center gap-0.5">
+                                  <Bot className="w-2.5 h-2.5" /> Broadcast
+                                </span>
+                              )}
+                              <span className="text-[10px] text-slate-400 font-mono bg-slate-950 px-2 py-0.5 border border-slate-800 rounded-lg ml-auto sm:ml-0">
+                                📅 {b.date} {b.time ? `@ ${b.time}` : ''}
+                              </span>
+                            </div>
+
+                            <p className="text-xs text-slate-300">
+                              <strong className="text-slate-500 font-normal">Instructions:</strong> {b.instructions}
+                            </p>
+                            
+                            <div className="flex items-center space-x-4 text-[10px] font-mono text-slate-500">
+                              <span className="flex items-center">
+                                <Clock className="w-3.5 h-3.5 mr-1" />
+                                {b.hours} hrs {b.minutes > 0 ? `${b.minutes} mins` : ''} Needed
+                              </span>
+                              <span className="flex items-center"><MapPin className="w-3.5 h-3.5 mr-1" />{b.address}</span>
+                            </div>
+                          </div>
+
+                          <div className="flex sm:flex-col justify-between items-end w-full sm:w-auto pt-3 sm:pt-0 border-t sm:border-t-0 border-slate-850 shrink-0">
+                            <div className="text-left sm:text-right mb-2">
+                              <span className="text-base font-black text-amber-400 font-mono">₹{b.cost}</span>
+                              <p className="text-[9px] text-slate-500 uppercase tracking-wider leading-none">Total Paid</p>
+                            </div>
+                            
+                            <div className="flex gap-2">
+                              {/* Live Track Action trigger */}
+                              {(b.status === 'In Progress' || b.status === 'Pending') && b.expertId !== 'broadcast' && (
+                                <button
+                                  type="button"
+                                  onClick={() => setTrackedBookingId(b.id)}
+                                  className="bg-amber-500 text-slate-950 hover:bg-amber-400 text-[10px] font-black py-1.5 px-3 rounded-xl cursor-pointer transition flex items-center gap-1 shadow-md shadow-amber-500/15"
+                                >
+                                  <Zap className="w-3 h-3 fill-slate-950" /> Track Live Location 📍
+                                </button>
+                              )}
+
+                              {b.status === 'Pending' && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleUpdateBookingStatus(b.id, 'Cancelled')}
+                                  className="bg-rose-500/10 hover:bg-rose-500 hover:text-white text-rose-400 text-[10px] font-bold py-1.5 px-3 rounded-lg border border-rose-500/20 transition cursor-pointer"
+                                >
+                                  Cancel Booking
+                                </button>
+                              )}
                             </div>
                           </div>
                         </div>
+                      ))}
 
-                        {/* Alerts status */}
-                        <div className="bg-slate-900 border border-slate-850 p-3 rounded-xl flex justify-between items-center text-xs">
-                          <p className="text-slate-400">
-                            <strong>Status:</strong> {
-                              trackingStep === 1 ? 'Specialist accepting your tools and matching doorstep routing coordinates...' :
-                              trackingStep === 2 ? `Expert ${trackedB.expertName} has mounted their vehicle and is dispatched!` :
-                              trackingStep === 3 ? 'Heading over via Noida sector road. Speeding down towards your society gate.' :
-                              trackingStep === 4 ? 'Arrived at society main gate! Entering and finding your building block.' :
-                              'Expert is at your doorstep. Please answer door!'
-                            }
+                      {displayedBookings.length === 0 && (
+                        <div className="text-center p-12 bg-slate-900/20 border border-slate-900 rounded-3xl space-y-4">
+                          <p className="text-xs text-slate-500 font-bold">
+                            {bookingSubTab === 'upcoming' 
+                              ? "You have no upcoming doorstep service bookings scheduled." 
+                              : "You haven't completed any doorstep services yet."}
                           </p>
-                          <span className="text-[10px] font-bold text-slate-500 font-mono shrink-0 ml-2">
-                            📞 {trackedB.customerPhone || '9876543210'}
-                          </span>
-                        </div>
-                      </div>
-                    );
-                  })()}
-
-                  <div className="space-y-3.5">
-                    {bookings.map(b => (
-                      <div key={b.id} className="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                        <div className="space-y-1.5">
-                          <div className="flex items-center space-x-2 flex-wrap gap-y-1">
-                            <span className="text-xs font-bold text-white">{b.expertName}</span>
-                            <span className="text-[10px] text-slate-500 font-mono">({b.category})</span>
-                            <span className={`text-[9px] font-bold font-mono uppercase tracking-wider py-0.5 px-2 rounded-full ${
-                              b.status === 'Completed' ? 'bg-emerald-500/10 text-emerald-400' :
-                              b.status === 'In Progress' ? 'bg-blue-500/10 text-blue-400' :
-                              b.status === 'Cancelled' ? 'bg-rose-500/10 text-rose-400' : 'bg-amber-500/10 text-amber-400'
-                            }`}>
-                              {b.status}
-                            </span>
-                            {b.isEmergency && (
-                              <span className="text-[9px] font-bold bg-rose-500/10 text-rose-400 border border-rose-500/20 py-0.5 px-2 rounded-full uppercase tracking-wider flex items-center gap-0.5 animate-pulse">
-                                <Zap className="w-2.5 h-2.5 fill-rose-400" /> EMERGENCY (10-30 MIN ARRIVAL)
-                              </span>
-                            )}
-                            {b.isBroadcast && (
-                              <span className="text-[9px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20 py-0.5 px-2 rounded-full uppercase tracking-wider flex items-center gap-0.5">
-                                <Bot className="w-2.5 h-2.5" /> Broadcast
-                              </span>
-                            )}
-                            <span className="text-[10px] text-slate-400 font-mono bg-slate-950 px-2 py-0.5 border border-slate-800 rounded-lg ml-auto sm:ml-0">
-                              📅 {b.date} {b.time ? `@ ${b.time}` : ''}
-                            </span>
-                          </div>
-
-                          <p className="text-xs text-slate-300"><strong className="text-slate-500 font-normal">Instructions:</strong> {b.instructions}</p>
-                          
-                          <div className="flex items-center space-x-4 text-[10px] font-mono text-slate-500">
-                            <span className="flex items-center">
-                              <Clock className="w-3.5 h-3.5 mr-1" />
-                              {b.hours} hrs {b.minutes > 0 ? `${b.minutes} mins` : ''} Needed
-                            </span>
-                            <span className="flex items-center"><MapPin className="w-3.5 h-3.5 mr-1" />{b.address}</span>
-                          </div>
-                        </div>
-
-                        <div className="flex sm:flex-col justify-between items-end w-full sm:w-auto pt-3 sm:pt-0 border-t sm:border-t-0 border-slate-850 shrink-0">
-                          <div className="text-left sm:text-right">
-                            <span className="text-base font-black text-amber-400 font-mono">₹{b.cost}</span>
-                            <p className="text-[9px] text-slate-500 uppercase tracking-wider leading-none">Total Paid</p>
-                          </div>
-                          
-                          {/* Live Track Action trigger */}
-                          {(b.status === 'In Progress' || b.status === 'Pending') && b.expertId !== 'broadcast' && (
+                          {bookingSubTab === 'upcoming' && (
                             <button
-                              type="button"
-                              onClick={() => setTrackedBookingId(b.id)}
-                              className="mt-2.5 bg-amber-500 text-slate-950 hover:bg-amber-400 text-[10px] font-black py-1.5 px-3 rounded-xl cursor-pointer transition flex items-center gap-1 shadow-md shadow-amber-500/15"
+                              onClick={() => setActiveTab('browse')}
+                              className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs py-2.5 px-5 rounded-xl cursor-pointer transition inline-flex items-center space-x-1"
                             >
-                              <Zap className="w-3 h-3 fill-slate-950" /> Track Live Location 📍
-                            </button>
-                          )}
-
-                          {b.status === 'Pending' && (
-                            <button
-                              type="button"
-                              onClick={() => handleUpdateBookingStatus(b.id, 'Cancelled')}
-                              className="mt-2 bg-rose-500/10 hover:bg-rose-500 hover:text-white text-rose-400 text-[10px] font-bold py-1 px-2.5 rounded-lg border border-rose-500/20 transition cursor-pointer"
-                            >
-                              Cancel Booking
+                              <span>Browse Handyman Experts Now</span>
+                              <ArrowRight className="w-4 h-4" />
                             </button>
                           )}
                         </div>
-                      </div>
-                    ))}
-
-                    {bookings.length === 0 && (
-                      <div className="text-center p-8 bg-slate-900/20 border border-slate-900 rounded-2xl">
-                        <p className="text-xs text-slate-500">You haven't made any doorstep booking requests yet.</p>
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </div>
-                </div>
-              )}
+                );
+              })()}
 
               {/* Addresses Tab: Saved doorstep locations */}
               {activeTab === 'addresses' && (
@@ -2254,6 +2502,127 @@ export default function Home() {
                       </div>
                       <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
                     </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Favorites Tab: Bookmarked Service Providers */}
+              {activeTab === 'favorites' && (
+                <div className="space-y-6 max-w-4xl animate-fade-in">
+                  <div>
+                    <h3 className="font-display font-extrabold text-lg text-white flex items-center gap-2">
+                      <Heart className="w-5 h-5 text-rose-500 fill-rose-500" />
+                      <span>My Bookmarked Favorites</span>
+                    </h3>
+                    <p className="text-xs text-slate-400">Quickly view, manage, and book your trusted service providers in one place.</p>
+                  </div>
+
+                  <div className="space-y-3">
+                    {(() => {
+                      const favoritedExpertsList = experts.filter(exp => favorites.includes(exp.id));
+                      
+                      if (favoritedExpertsList.length === 0) {
+                        return (
+                          <div className="p-12 text-center bg-slate-900/20 border border-slate-900 rounded-2xl space-y-3 max-w-xl mx-auto">
+                            <Heart className="w-10 h-10 text-slate-700 mx-auto" />
+                            <h5 className="text-sm font-bold text-slate-400">No bookmarked providers yet</h5>
+                            <p className="text-xs text-slate-500 leading-relaxed">
+                              Browse through our find experts page, click the heart icon on any provider's profile card, and they will appear here for easy future access.
+                            </p>
+                            <button
+                              type="button"
+                              onClick={() => setActiveTab('browse')}
+                              className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold rounded-xl transition cursor-pointer"
+                            >
+                              Explore Providers
+                            </button>
+                          </div>
+                        );
+                      }
+
+                      return favoritedExpertsList.map(exp => (
+                        <div 
+                          key={exp.id} 
+                          className="p-5 rounded-2xl border bg-slate-900/40 border-slate-800/60 hover:border-slate-700 transition duration-150 flex flex-col sm:flex-row justify-between gap-4"
+                        >
+                          <div className="flex items-start space-x-4">
+                            <div className="relative shrink-0">
+                              <img
+                                src={`https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(exp.name)}&backgroundColor=f59e0b&textColor=0f172a`}
+                                alt={exp.name}
+                                className="w-12 h-12 rounded-xl object-cover ring-2 ring-slate-800/80"
+                              />
+                              <span className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-slate-950 ${
+                                exp.providerDetails.availability === 'available' ? 'bg-emerald-500' : 'bg-amber-500'
+                              }`} />
+                            </div>
+
+                            <div className="space-y-1.5">
+                              <div className="flex items-center space-x-2 flex-wrap">
+                                <h5 className="text-sm font-black text-white">{exp.name}</h5>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    toggleFavorite(exp.id);
+                                  }}
+                                  className="p-1 rounded-lg text-rose-500 hover:bg-rose-500/10 transition cursor-pointer"
+                                  title="Remove from Favorites"
+                                >
+                                  <Heart className="w-3.5 h-3.5 fill-rose-500" />
+                                </button>
+                                {exp.providerDetails.isVerified && (
+                                  <span className="inline-flex items-center text-[9px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full">
+                                    <ShieldCheck className="w-3 h-3 mr-0.5" /> Verified Saathi
+                                  </span>
+                                )}
+                                <span className="inline-flex items-center text-[9px] font-bold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-full">
+                                  {exp.providerDetails.category}
+                                </span>
+                                <span className="text-[10px] text-slate-500 font-mono">{exp.address}</span>
+                              </div>
+
+                              <p className="text-xs text-slate-400 line-clamp-2 leading-relaxed">{exp.providerDetails.bio}</p>
+                              
+                              <div className="flex flex-wrap gap-1.5 pt-1">
+                                {exp.providerDetails.skills.map((skill, idx) => (
+                                  <span key={idx} className="text-[9px] font-mono text-slate-400 bg-slate-950 border border-slate-850 px-2 py-0.5 rounded-md">
+                                    {skill}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Action columns / Pricing */}
+                          <div className="flex sm:flex-col justify-between items-end shrink-0 pt-3 sm:pt-0 border-t sm:border-t-0 border-slate-850">
+                            <div className="text-left sm:text-right">
+                              <span className="block text-lg font-black text-amber-400 font-mono">₹{exp.providerDetails.rate}/hr</span>
+                              <span className="text-[10px] text-slate-500 flex items-center sm:justify-end">
+                                <Star className="w-3 h-3 fill-amber-400 text-amber-400 mr-1" />
+                                <strong>{exp.providerDetails.rating}</strong>&nbsp;({exp.providerDetails.ratingsCount} reviews)
+                              </span>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setActiveTab('browse');
+                                handleInitiateBooking(exp);
+                              }}
+                              disabled={exp.providerDetails.availability !== 'available'}
+                              className={`text-xs font-bold py-2 px-4 rounded-xl cursor-pointer mt-3 transition duration-150 ${
+                                exp.providerDetails.availability === 'available'
+                                  ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-md shadow-amber-500/10'
+                                  : 'bg-slate-800 text-slate-500 cursor-not-allowed'
+                              }`}
+                            >
+                              {exp.providerDetails.availability === 'available' ? 'Book Instantly' : 'Busy / Engaged'}
+                            </button>
+                          </div>
+                        </div>
+                      ));
+                    })()}
                   </div>
                 </div>
               )}
@@ -2642,11 +3011,45 @@ export default function Home() {
                   
                   {/* Account directory (8 cols) */}
                   <div className="lg:col-span-8 space-y-4">
-                    <div className="flex justify-between items-center pb-2 border-b border-slate-850">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2 border-b border-slate-850">
                       <div>
                         <h3 className="font-display font-extrabold text-base text-white">Member Accounts Directory</h3>
-                        <p className="text-xs text-slate-500">Approve accounts or block users violating service standards.</p>
+                        <p className="text-xs text-slate-500">Approve accounts, block, or permanently delete users.</p>
                       </div>
+                    </div>
+
+                    {/* Sub-tab Selectors for Users vs Service Providers */}
+                    <div className="grid grid-cols-2 bg-slate-950/60 p-1.5 rounded-2xl border border-slate-800/80">
+                      <button
+                        onClick={() => setAdminSubTab('customers')}
+                        className={`py-2.5 px-4 rounded-xl text-xs font-bold transition flex items-center justify-center space-x-2 cursor-pointer ${
+                          adminSubTab === 'customers'
+                            ? 'bg-amber-500 text-slate-950 shadow-lg shadow-amber-500/10 font-black'
+                            : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/40'
+                        }`}
+                      >
+                        <span>👥 Customer Directory</span>
+                        <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full font-bold ${
+                          adminSubTab === 'customers' ? 'bg-slate-950/25 text-slate-950' : 'bg-slate-900 text-slate-400'
+                        }`}>
+                          {users.filter(u => u.role !== 'provider').length}
+                        </span>
+                      </button>
+                      <button
+                        onClick={() => setAdminSubTab('providers')}
+                        className={`py-2.5 px-4 rounded-xl text-xs font-bold transition flex items-center justify-center space-x-2 cursor-pointer ${
+                          adminSubTab === 'providers'
+                            ? 'bg-amber-500 text-slate-950 shadow-lg shadow-amber-500/10 font-black'
+                            : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/40'
+                        }`}
+                      >
+                        <span>🛠️ Service Providers</span>
+                        <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full font-bold ${
+                          adminSubTab === 'providers' ? 'bg-slate-950/25 text-slate-950' : 'bg-slate-900 text-slate-400'
+                        }`}>
+                          {users.filter(u => u.role === 'provider').length}
+                        </span>
+                      </button>
                     </div>
 
                     <div className="bg-slate-900/60 border border-slate-800/80 rounded-2xl overflow-hidden">
@@ -2661,66 +3064,83 @@ export default function Home() {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-800">
-                          {users.map(u => {
-                            const isExpanded = expandedUserId === u.id || expandedUserId === u._id;
-                            const expDetails = u.role === 'provider' ? (u.providerDetails || experts.find(e => e.id === u.id || e._id === u.id || e.email === u.email)?.providerDetails) : null;
-                            
-                            return (
-                              <React.Fragment key={u.id}>
-                                <tr className={`hover:bg-slate-900/25 transition-colors cursor-pointer ${isExpanded ? 'bg-slate-900/20' : ''}`} onClick={() => setExpandedUserId(isExpanded ? null : u.id)}>
-                                  <td className="p-4">
-                                    <div className="flex items-center space-x-3">
-                                      <img
-                                        src={u.profileImage || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(u.name)}&backgroundColor=f59e0b&textColor=0f172a`}
-                                        alt={u.name}
-                                        referrerPolicy="no-referrer"
-                                        className="w-8 h-8 rounded-lg object-cover ring-1 ring-slate-800"
-                                      />
-                                      <div>
-                                        <span className="font-bold text-white block text-xs hover:text-amber-400 transition">{u.name}</span>
-                                        {u.role === 'provider' && expDetails && (
-                                          <span className="text-[9px] text-amber-500 font-mono font-black uppercase tracking-wider">{expDetails.category} Specialist</span>
-                                        )}
+                          {users
+                            .filter(u => {
+                              if (adminSubTab === 'customers') {
+                                return u.role !== 'provider';
+                              } else {
+                                return u.role === 'provider';
+                              }
+                            })
+                            .map(u => {
+                              const isExpanded = expandedUserId === u.id || expandedUserId === u._id;
+                              const expDetails = u.role === 'provider' ? (u.providerDetails || experts.find(e => e.id === u.id || e._id === u.id || e.email === u.email)?.providerDetails) : null;
+                              
+                              return (
+                                <React.Fragment key={u.id}>
+                                  <tr className={`hover:bg-slate-900/25 transition-colors cursor-pointer ${isExpanded ? 'bg-slate-900/20' : ''}`} onClick={() => setExpandedUserId(isExpanded ? null : u.id)}>
+                                    <td className="p-4">
+                                      <div className="flex items-center space-x-3">
+                                        <img
+                                          src={u.profileImage || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(u.name)}&backgroundColor=f59e0b&textColor=0f172a`}
+                                          alt={u.name}
+                                          referrerPolicy="no-referrer"
+                                          className="w-8 h-8 rounded-lg object-cover ring-1 ring-slate-800"
+                                        />
+                                        <div>
+                                          <span className="font-bold text-white block text-xs hover:text-amber-400 transition">{u.name}</span>
+                                          {u.role === 'provider' && expDetails && (
+                                            <span className="text-[9px] text-amber-500 font-mono font-black uppercase tracking-wider">{expDetails.category} Specialist</span>
+                                          )}
+                                        </div>
                                       </div>
-                                    </div>
-                                  </td>
-                                  <td className="p-4 font-mono text-slate-450">{u.email}</td>
-                                  <td className="p-4 capitalize">
-                                    <span className={`py-0.5 px-2 rounded-md font-mono text-[9px] font-bold ${
-                                      u.role === 'admin' ? 'bg-rose-500/10 text-rose-450' :
-                                      u.role === 'provider' ? 'bg-amber-500/10 text-amber-450' : 'bg-blue-500/10 text-blue-450'
-                                    }`}>
-                                      {u.role}
-                                    </span>
-                                  </td>
-                                  <td className="p-4">
-                                    <span className={`py-0.5 px-2 rounded-full text-[9px] font-mono font-bold ${
-                                      u.isSuspended ? 'bg-rose-500/10 text-rose-400 border border-rose-500/15' : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/15'
-                                    }`}>
-                                      {u.isSuspended ? 'Suspended' : 'Active'}
-                                    </span>
-                                  </td>
-                                  <td className="p-4 text-right" onClick={(e) => e.stopPropagation()}>
-                                    <div className="flex items-center justify-end space-x-2">
-                                      <button
-                                        onClick={() => setExpandedUserId(isExpanded ? null : u.id)}
-                                        className="text-[10px] font-bold py-1.5 px-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition cursor-pointer"
-                                      >
-                                        {isExpanded ? 'Hide Info' : 'View Profile'}
-                                      </button>
-                                      <button
-                                        onClick={() => handleToggleSuspension(u.id)}
-                                        className={`text-[10px] font-bold py-1.5 px-3 rounded-lg transition cursor-pointer ${
-                                          u.isSuspended 
-                                            ? 'bg-emerald-500/10 hover:bg-emerald-500 hover:text-slate-950 text-emerald-400'
-                                            : 'bg-rose-500/10 hover:bg-rose-500 hover:text-white text-rose-400'
-                                        }`}
-                                      >
-                                        {u.isSuspended ? 'Unblock' : 'Block'}
-                                      </button>
-                                    </div>
-                                  </td>
-                                </tr>
+                                    </td>
+                                    <td className="p-4 font-mono text-slate-450">{u.email}</td>
+                                    <td className="p-4 capitalize">
+                                      <span className={`py-0.5 px-2 rounded-md font-mono text-[9px] font-bold ${
+                                        u.role === 'admin' ? 'bg-rose-500/10 text-rose-450' :
+                                        u.role === 'provider' ? 'bg-amber-500/10 text-amber-450' : 'bg-blue-500/10 text-blue-450'
+                                      }`}>
+                                        {u.role}
+                                      </span>
+                                    </td>
+                                    <td className="p-4">
+                                      <span className={`py-0.5 px-2 rounded-full text-[9px] font-mono font-bold ${
+                                        u.isSuspended ? 'bg-rose-500/10 text-rose-400 border border-rose-500/15' : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/15'
+                                      }`}>
+                                        {u.isSuspended ? 'Suspended' : 'Active'}
+                                      </span>
+                                    </td>
+                                    <td className="p-4 text-right" onClick={(e) => e.stopPropagation()}>
+                                      <div className="flex items-center justify-end space-x-1.5 sm:space-x-2">
+                                        <button
+                                          onClick={() => setExpandedUserId(isExpanded ? null : u.id)}
+                                          className="text-[10px] font-bold py-1.5 px-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition cursor-pointer"
+                                        >
+                                          {isExpanded ? 'Hide' : 'Info'}
+                                        </button>
+                                        <button
+                                          onClick={() => handleToggleSuspension(u.id)}
+                                          className={`text-[10px] font-bold py-1.5 px-3 rounded-lg transition cursor-pointer ${
+                                            u.isSuspended 
+                                              ? 'bg-emerald-500/10 hover:bg-emerald-500 hover:text-slate-950 text-emerald-400'
+                                              : 'bg-rose-500/10 hover:bg-rose-500 hover:text-white text-rose-400'
+                                          }`}
+                                        >
+                                          {u.isSuspended ? 'Unblock' : 'Block'}
+                                        </button>
+                                        <button
+                                          onClick={() => handleDeleteUser(u.id || u._id)}
+                                          className="text-[10px] font-bold py-1.5 px-2.5 rounded-lg bg-red-500/10 hover:bg-red-500 hover:text-white text-red-400 transition cursor-pointer flex items-center space-x-1"
+                                          title="Delete Account Permanently"
+                                          disabled={user?.email === u.email || user?.id === u.id || user?._id?.toString() === u.id || user?.id === u._id}
+                                        >
+                                          <Trash2 className="w-3.5 h-3.5" />
+                                          <span className="hidden sm:inline">Delete</span>
+                                        </button>
+                                      </div>
+                                    </td>
+                                  </tr>
                                 
                                 {isExpanded && (
                                   <tr className="bg-slate-950/80" onClick={(e) => e.stopPropagation()}>

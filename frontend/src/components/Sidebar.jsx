@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import Logo from './Logo';
 import { 
   Home, Briefcase, MapPin, Sparkles, Users, Clock, LogOut, 
-  ShieldAlert, UserCheck, Menu, X, ArrowLeftRight, HelpCircle, Star, ShieldCheck
+  ShieldAlert, UserCheck, Menu, X, ArrowLeftRight, HelpCircle, Star, ShieldCheck, Heart
 } from 'lucide-react';
 
 export default function Sidebar({ activeTab, setActiveTab }) {
@@ -25,9 +25,10 @@ export default function Sidebar({ activeTab, setActiveTab }) {
     if (user.role === 'customer') {
       links = [
         { id: 'browse', label: 'Find Experts', icon: Home, badge: 'Active' },
+        { id: 'favorites', label: 'My Favorites', icon: Heart },
         { id: 'bookings', label: 'My Bookings', icon: Briefcase },
         { id: 'addresses', label: 'Doorstep Address', icon: MapPin },
-        { id: 'ai-mitra', label: 'AI Mitra Help', icon: Sparkles, highlight: true }
+        { id: 'ai-mitra', label: 'SevaSaathi AI Support', icon: Sparkles, highlight: true }
       ];
     } else if (user.role === 'provider') {
       links = [

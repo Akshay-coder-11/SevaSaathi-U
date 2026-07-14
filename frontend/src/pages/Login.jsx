@@ -164,7 +164,7 @@ export default function Login() {
         {/* Preloaded Demo accounts */}
         <div className="bg-slate-900/30 border border-slate-800/60 rounded-2xl p-5 text-center text-xs space-y-2.5">
           <p className="text-slate-400 font-semibold uppercase tracking-wider text-[10px]">Select Preloaded Account for Demo Assessment</p>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             <button
               onClick={() => setDemoCredentials('customer@sevasaathi.com', 'customer123')}
               className="bg-slate-950 hover:bg-slate-900 border border-slate-800 text-slate-300 py-1.5 px-2.5 rounded-lg text-[11px] font-medium transition"
@@ -176,12 +176,6 @@ export default function Login() {
               className="bg-slate-950 hover:bg-slate-900 border border-slate-800 text-slate-300 py-1.5 px-2.5 rounded-lg text-[11px] font-medium transition"
             >
               Service Provider
-            </button>
-            <button
-              onClick={() => setDemoCredentials('admin@sevasaathi.com', 'admin123')}
-              className="bg-slate-950 hover:bg-slate-900 border border-slate-800 text-slate-300 py-1.5 px-2.5 rounded-lg text-[11px] font-medium transition"
-            >
-              Administrator
             </button>
           </div>
         </div>

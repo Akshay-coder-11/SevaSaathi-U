@@ -375,3 +375,41 @@ export const getProviders = asyncHandler(async (req, res, next) => {
     providers: mappedProviders
   });
 });
+
+// @desc    Delete user account (Admin only)
+// @route   DELETE /api/user/admin/delete/:id
+// @access  Private/Admin
+export const deleteUser = asyncHandler(async (req, res, next) => {
+  const userId = req.params.id;
+  if (mongoose.connection.readyState === 1) {
+    try {
+      if (!mongoose.Types.ObjectId.isValid(userId)) {
+        return res.status(200).json({
+          success: true,
+          message: 'Simulation: Mock account deleted successfully.'
+        });
+      }
+      const user = await User.findById(userId);
+      if (!user) {
+        return next(new ErrorResponse('User not found', 404));
+      }
+      // Don't allow deleting self
+      if (req.user && (req.user.id === userId || req.user._id?.toString() === userId)) {
+        return next(new ErrorResponse('You cannot delete your own admin account', 400));
+      }
+      await User.findByIdAndDelete(userId);
+      return res.status(200).json({
+        success: true,
+        message: 'Account deleted successfully'
+      });
+    } catch (err) {
+      return next(new ErrorResponse('Database error while deleting user', 500));
+    }
+  }
+
+  res.status(200).json({
+    success: true,
+    message: 'Simulation: user deleted successfully.'
+  });
+});
+

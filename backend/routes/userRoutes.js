@@ -9,7 +9,8 @@ import {
   getAllUsers,
   toggleUserSuspension,
   verifyProvider,
-  getProviders
+  getProviders,
+  deleteUser
 } from '../controllers/userController.js';
 import { protect, authorizeRoles } from '../middleware/authMiddleware.js';
 import upload from '../config/multer.js';
@@ -34,5 +35,6 @@ router.route('/addresses')
 router.get('/admin/users', protect, authorizeRoles('admin'), getAllUsers);
 router.put('/admin/suspend/:id', protect, authorizeRoles('admin'), toggleUserSuspension);
 router.put('/admin/verify/:id', protect, authorizeRoles('admin'), verifyProvider);
+router.delete('/admin/delete/:id', protect, authorizeRoles('admin'), deleteUser);
 
 export default router;
