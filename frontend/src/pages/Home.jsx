@@ -230,13 +230,40 @@ export default function Home() {
   
   // Simulated Local Storage Database for Demo MVP State
   const [experts, setExperts] = useState([
+    // Electricians
     { id: 'prov_1', name: 'Ramesh Kumar', role: 'provider', email: 'ramesh@sevasaathi.com', phone: '9812345678', address: 'Sector 15, Noida', providerDetails: { category: 'Electrician', rate: 299, rating: 4.8, ratingsCount: 15, isVerified: true, availability: 'available', completedJobs: 42, earnings: 12500, bio: 'Expert certified residential electrician with 8+ years experience.', skills: ['Wiring', 'AC installation', 'Mainboard Repair'] } },
+    { id: 'prov_1_2', name: 'Amit Mishra', role: 'provider', email: 'amit@sevasaathi.com', phone: '9812345612', address: 'Sector 62, Noida', providerDetails: { category: 'Electrician', rate: 249, rating: 4.9, ratingsCount: 34, isVerified: true, availability: 'available', completedJobs: 89, earnings: 25000, bio: 'Top rated domestic electrician specializing in appliance repairs & house wiring.', skills: ['Appliance Repair', 'House Wiring', 'Short Circuit Fix'] } },
+    { id: 'prov_1_3', name: 'Sandeep Verma', role: 'provider', email: 'sandeep@sevasaathi.com', phone: '9812345634', address: 'Sector 18, Noida', providerDetails: { category: 'Electrician', rate: 199, rating: 4.3, ratingsCount: 9, isVerified: false, availability: 'busy', completedJobs: 15, earnings: 3000, bio: 'Affordable handyman electrician for quick switch fixes & fuse wiring.', skills: ['Fuse Repair', 'Inverter Battery setup', 'Switch installation'] } },
+
+    // Cooks
     { id: 'prov_2', name: 'Sunita Sharma', role: 'provider', email: 'sunita@sevasaathi.com', phone: '9823456789', address: 'Indirapuram, Ghaziabad', providerDetails: { category: 'Cook / Chef', rate: 199, rating: 4.9, ratingsCount: 22, isVerified: true, availability: 'available', completedJobs: 85, earnings: 18900, bio: 'Home cook specializing in healthy North & South Indian meals.', skills: ['North Indian', 'South Indian', 'Baking'] } },
+    { id: 'prov_2_2', name: 'Preeti Devi', role: 'provider', email: 'preeti@sevasaathi.com', phone: '9823456711', address: 'Sector 50, Noida', providerDetails: { category: 'Cook / Chef', rate: 150, rating: 4.6, ratingsCount: 12, isVerified: false, availability: 'available', completedJobs: 24, earnings: 3600, bio: 'Local expert in traditional homestyle chapati, sabzi & regional cuisines.', skills: ['Chapatis', 'Gujarati dishes', 'Veg curries'] } },
+    { id: 'prov_2_3', name: 'Chef Rajesh Khanna', role: 'provider', email: 'rajeshchef@sevasaathi.com', phone: '9823456722', address: 'Vasant Kunj, Delhi', providerDetails: { category: 'Cook / Chef', rate: 350, rating: 4.8, ratingsCount: 40, isVerified: true, availability: 'busy', completedJobs: 112, earnings: 39000, bio: 'Professional multi-cuisine chef for premium events, dinner parties and catering.', skills: ['Continental', 'Tandoor special', 'Chinese cuisine'] } },
+
+    // Plumbers
     { id: 'prov_3', name: 'Vikram Singh', role: 'provider', email: 'vikram@sevasaathi.com', phone: '9834567890', address: 'Vasant Kunj, Delhi', providerDetails: { category: 'Plumber', rate: 249, rating: 4.5, ratingsCount: 8, isVerified: false, availability: 'available', completedJobs: 12, earnings: 3200, bio: 'Experienced plumber for emergency water blockages and pipe routing.', skills: ['Fitting', 'Water Heaters', 'Leak repair'] } },
+    { id: 'prov_3_2', name: 'Rajinder Prasad', role: 'provider', email: 'rajinder@sevasaathi.com', phone: '9834567811', address: 'Indirapuram, Ghaziabad', providerDetails: { category: 'Plumber', rate: 180, rating: 4.7, ratingsCount: 16, isVerified: true, availability: 'available', completedJobs: 38, earnings: 6840, bio: 'Honest and certified plumber specializing in tap fixes, drainage clearing & sanitary fittings.', skills: ['Tap Leaks', 'Sanitary Fitting', 'Drainage Cleaning'] } },
+    { id: 'prov_3_3', name: 'Manoj Tiwari', role: 'provider', email: 'manoj@sevasaathi.com', phone: '9834567822', address: 'Sector 45, Noida', providerDetails: { category: 'Plumber', rate: 300, rating: 4.9, ratingsCount: 29, isVerified: true, availability: 'busy', completedJobs: 74, earnings: 22200, bio: 'Senior master plumber. Heavy industrial fittings, geyser breakdowns, and full pipe layouts.', skills: ['Geyser Repair', 'Pipeline Installation', 'Water Pressure Pumps'] } },
+
+    // Mechanics
     { id: 'prov_4', name: 'Anil Gupta', role: 'provider', email: 'anil@sevasaathi.com', phone: '9845678901', address: 'Dwarka, Delhi', providerDetails: { category: 'Mechanic', rate: 349, rating: 4.7, ratingsCount: 19, isVerified: true, availability: 'busy', completedJobs: 56, earnings: 21000, bio: 'Certified car technician with expertise in multi-brand engine tuning.', skills: ['Car Diagnostics', 'Engine Tuning', 'Brakes'] } },
+    { id: 'prov_4_2', name: 'Gurpreet Singh', role: 'provider', email: 'gurpreet@sevasaathi.com', phone: '9845678922', address: 'Sector 62, Noida', providerDetails: { category: 'Mechanic', rate: 299, rating: 4.9, ratingsCount: 31, isVerified: true, availability: 'available', completedJobs: 82, earnings: 24500, bio: 'Expert bike & car mechanic. On-the-spot breakdowns, engine tuning and filter replacements.', skills: ['Bike Engine Repair', 'Oil Filtering', 'Brake Pads'] } },
+
+    // Painters
     { id: 'prov_5', name: 'Suresh Pal', role: 'provider', email: 'suresh@sevasaathi.com', phone: '9856789012', address: 'Sector 62, Noida', providerDetails: { category: 'Painter', rate: 220, rating: 4.6, ratingsCount: 11, isVerified: true, availability: 'available', completedJobs: 28, earnings: 8400, bio: 'Professional wall painting, house coatings, texture finishes & exterior weather shield coatings.', skills: ['Wall Painting', 'Texture Work', 'Exterior Shield'] } },
+    { id: 'prov_5_2', name: 'Ajay Sharma', role: 'provider', email: 'ajaypainter@sevasaathi.com', phone: '9856789033', address: 'Indirapuram, Ghaziabad', providerDetails: { category: 'Painter', rate: 190, rating: 4.4, ratingsCount: 8, isVerified: false, availability: 'available', completedJobs: 14, earnings: 2600, bio: 'Budget home painting solutions, distemper coat, and rich wood polish.', skills: ['Distemper Coating', 'Wood Polishing', 'Putty Finish'] } },
+
+    // Masons
     { id: 'prov_6', name: 'Ram Ashrey', role: 'provider', email: 'ramashrey@sevasaathi.com', phone: '9867890123', address: 'Indirapuram, Ghaziabad', providerDetails: { category: 'Mistri (Mason)', rate: 399, rating: 4.7, ratingsCount: 18, isVerified: true, availability: 'available', completedJobs: 34, earnings: 14500, bio: 'Civil masonry expert. Specialized in vitrified tile layouts, brick construction, plastering, and leak dampness proofing.', skills: ['Tile Fitting', 'Wall Plastering', 'Brickwork'] } },
-    { id: 'prov_7', name: 'Chhotu Lal', role: 'provider', email: 'chhotu@sevasaathi.com', phone: '9878901234', address: 'Sector 15, Noida', providerDetails: { category: 'Labour (Helper)', rate: 149, rating: 4.6, ratingsCount: 29, isVerified: true, availability: 'available', completedJobs: 67, earnings: 11200, bio: 'Strong and dependable helper for shifting house luggages, loading/unloading vehicles, clearing debris, and general manual tasks.', skills: ['Heavy Shifting', 'Construction Assistance', 'Vehicle Loading'] } }
+    { id: 'prov_6_2', name: 'Kamal Dev', role: 'provider', email: 'kamal@sevasaathi.com', phone: '9867890144', address: 'Sector 15, Noida', providerDetails: { category: 'Mistri (Mason)', rate: 350, rating: 4.5, ratingsCount: 10, isVerified: false, availability: 'available', completedJobs: 19, earnings: 6650, bio: 'Skilled civil mason for concrete works, lintels, plaster, and brick wall extensions.', skills: ['Concrete Works', 'Brick Plastering', 'Wall Building'] } },
+
+    // Helpers
+    { id: 'prov_7', name: 'Chhotu Lal', role: 'provider', email: 'chhotu@sevasaathi.com', phone: '9878901234', address: 'Sector 15, Noida', providerDetails: { category: 'Labour (Helper)', rate: 149, rating: 4.6, ratingsCount: 29, isVerified: true, availability: 'available', completedJobs: 67, earnings: 11200, bio: 'Strong and dependable helper for shifting house luggages, loading/unloading vehicles, clearing debris, and general manual tasks.', skills: ['Heavy Shifting', 'Construction Assistance', 'Vehicle Loading'] } },
+    { id: 'prov_7_2', name: 'Mukesh Yadav', role: 'provider', email: 'mukesh@sevasaathi.com', phone: '9878901255', address: 'Sector 62, Noida', providerDetails: { category: 'Labour (Helper)', rate: 130, rating: 4.3, ratingsCount: 14, isVerified: false, availability: 'available', completedJobs: 22, earnings: 2860, bio: 'Hardworking manual assistant for site cleaning, shifting items, garden support.', skills: ['Lifting Shifting', 'Site Clearing', 'Garden support'] } },
+
+    // Cleaners
+    { id: 'prov_8_1', name: 'Geeta Bai', role: 'provider', email: 'geeta@sevasaathi.com', phone: '9889012301', address: 'Sector 22, Noida', providerDetails: { category: 'Cleaner / Maid', rate: 120, rating: 4.8, ratingsCount: 45, isVerified: true, availability: 'available', completedJobs: 142, earnings: 17040, bio: 'Most reliable domestic housekeeper. Deep flat cleaning, kitchen scrubbing & daily mopping.', skills: ['Kitchen Scrubbing', 'Deep Flat Cleaning', 'Bathroom Wash'] } },
+    { id: 'prov_8_2', name: 'Seema Sahu', role: 'provider', email: 'seema@sevasaathi.com', phone: '9889012302', address: 'Sector 34, Noida', providerDetails: { category: 'Cleaner / Maid', rate: 110, rating: 4.5, ratingsCount: 14, isVerified: false, availability: 'available', completedJobs: 30, earnings: 3300, bio: 'Detail-oriented cleaner. Furniture dusting, vacuum cleaning and washing utensils.', skills: ['Dusting', 'Utensils Washing', 'Vacuum cleaning'] } }
   ]);
 
   const [bookings, setBookings] = useState([
@@ -854,17 +881,66 @@ export default function Home() {
     }
   };
 
+  // Sorting state variables for the sequencial lists
+  const [customerSortBy, setCustomerSortBy] = useState('sequence');
+  const [guestSortBy, setGuestSortBy] = useState('sequence');
+
+  // Sorting helper to sequence experts logically
+  const getSortedExperts = (expertsList, sortingCriteria) => {
+    return [...expertsList].sort((a, b) => {
+      if (sortingCriteria === 'sequence') {
+        // 1. Available first, busy second
+        const availA = a.providerDetails.availability === 'available' ? 0 : 1;
+        const availB = b.providerDetails.availability === 'available' ? 0 : 1;
+        if (availA !== availB) return availA - availB;
+
+        // 2. Verified first, unverified second
+        const verA = a.providerDetails.isVerified ? 0 : 1;
+        const verB = b.providerDetails.isVerified ? 0 : 1;
+        if (verA !== verB) return verA - verB;
+
+        // 3. Highest rating first
+        const ratingDiff = b.providerDetails.rating - a.providerDetails.rating;
+        if (Math.abs(ratingDiff) > 0.01) return ratingDiff;
+
+        // 4. Most completed jobs first
+        return b.providerDetails.completedJobs - a.providerDetails.completedJobs;
+      }
+
+      if (sortingCriteria === 'rating') {
+        return b.providerDetails.rating - a.providerDetails.rating;
+      }
+
+      if (sortingCriteria === 'rateAsc') {
+        return a.providerDetails.rate - b.providerDetails.rate;
+      }
+
+      if (sortingCriteria === 'rateDesc') {
+        return b.providerDetails.rate - a.providerDetails.rate;
+      }
+
+      if (sortingCriteria === 'experience') {
+        return b.providerDetails.completedJobs - a.providerDetails.completedJobs;
+      }
+
+      return 0;
+    });
+  };
+
   // Filtered experts
-  const filteredExperts = experts.filter(exp => {
+  const baseFilteredExperts = experts.filter(exp => {
     const matchesCategory = exp.providerDetails.category === selectedCategory;
     const matchesQuery = exp.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           exp.providerDetails.skills.some(s => s.toLowerCase().includes(searchQuery.toLowerCase()));
     return matchesCategory && matchesQuery;
   });
 
+  const filteredExperts = getSortedExperts(baseFilteredExperts, customerSortBy);
+
   // GUEST LANDING PAGE PREVIEW CATEGORY TRIGGER
   const [guestCategory, setGuestCategory] = useState('Electrician');
-  const guestFilteredExperts = experts.filter(exp => exp.providerDetails.category === guestCategory);
+  const baseGuestFilteredExperts = experts.filter(exp => exp.providerDetails.category === guestCategory);
+  const guestFilteredExperts = getSortedExperts(baseGuestFilteredExperts, guestSortBy);
 
   // -------------------------------------------------------------
   // RENDERING MODE 1: PUBLIC VISITOR LANDING FRONT PAGE
@@ -948,10 +1024,14 @@ export default function Home() {
             {SERVICE_CATEGORIES.map(cat => (
               <button
                 key={cat.name}
-                onClick={() => setGuestCategory(cat.name)}
-                className={`p-5 rounded-2xl border text-left transition duration-200 cursor-pointer ${
+                onClick={() => {
+                  setGuestCategory(cat.name);
+                  // Default back to smart sequence on category switch
+                  setGuestSortBy('sequence');
+                }}
+                className={`p-5 rounded-2xl border text-left transition duration-300 cursor-pointer transform hover:scale-[1.03] active:scale-95 hover:shadow-lg ${
                   guestCategory === cat.name
-                    ? 'bg-amber-500/10 border-amber-500 text-white'
+                    ? 'bg-amber-500/10 border-amber-500 text-white shadow-amber-500/5'
                     : 'bg-slate-900/40 border-slate-900 text-slate-400 hover:border-slate-800'
                 }`}
               >
@@ -976,6 +1056,35 @@ export default function Home() {
                 <span>View All Experts</span>
                 <ArrowRight className="w-4 h-4" />
               </Link>
+            </div>
+
+            {/* Sequence & Sorting Controller Bar */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-950/50 p-3 rounded-xl border border-slate-850/80">
+              <span className="text-[10px] font-mono text-slate-400 flex items-center gap-1.5 uppercase tracking-wider font-bold">
+                <Sparkles className="w-3.5 h-3.5 text-amber-500" /> SEQUENCE ORDER:
+              </span>
+              <div className="flex flex-wrap gap-1">
+                {[
+                  { id: 'sequence', label: '⚡ Smart Sequence' },
+                  { id: 'rating', label: '⭐ Top Rated' },
+                  { id: 'rateAsc', label: '₹ Low to High' },
+                  { id: 'rateDesc', label: '₹ High to Low' },
+                  { id: 'experience', label: '💼 Experience' }
+                ].map(opt => (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() => setGuestSortBy(opt.id)}
+                    className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition duration-150 cursor-pointer ${
+                      guestSortBy === opt.id
+                        ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/10'
+                        : 'bg-slate-900 text-slate-400 hover:bg-slate-850 hover:text-white border border-slate-800'
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1145,11 +1254,13 @@ export default function Home() {
                           onClick={() => {
                             setSelectedCategory(cat.name);
                             setSelectedExpert(null);
+                            // Default back to smart sequence on category change
+                            setCustomerSortBy('sequence');
                           }}
-                          className={`p-4 rounded-xl text-left border transition cursor-pointer hover:border-amber-500/50 ${
+                          className={`p-4 rounded-xl text-left border transition duration-300 cursor-pointer transform hover:scale-[1.03] active:scale-95 hover:shadow-lg ${
                             selectedCategory === cat.name
-                              ? 'bg-amber-500/10 border-amber-500 text-white'
-                              : 'bg-slate-900/60 border-slate-800 text-slate-300'
+                              ? 'bg-amber-500/10 border-amber-500 text-white shadow-amber-500/5'
+                              : 'bg-slate-900/60 border-slate-800 text-slate-300 hover:border-slate-700'
                           }`}
                         >
                           <span className="text-2xl mb-1 block">{cat.icon}</span>
@@ -1165,9 +1276,40 @@ export default function Home() {
                     
                     {/* Active list of Experts matching category (8 cols) */}
                     <div className="lg:col-span-8 space-y-4">
-                      <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest font-mono">
-                        Available {selectedCategory} Specialists ({filteredExperts.length})
-                      </h4>
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest font-mono">
+                          Available {selectedCategory} Specialists ({filteredExperts.length})
+                        </h4>
+                      </div>
+
+                      {/* Customer Sequence & Sorting Controller Bar */}
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-900/40 p-3 rounded-xl border border-slate-850/60 shadow-lg">
+                        <span className="text-[10px] font-mono text-slate-400 flex items-center gap-1.5 uppercase tracking-wider font-bold">
+                          <Sparkles className="w-3.5 h-3.5 text-amber-500" /> SEQUENCE ORDER:
+                        </span>
+                        <div className="flex flex-wrap gap-1">
+                          {[
+                            { id: 'sequence', label: '⚡ Smart Sequence' },
+                            { id: 'rating', label: '⭐ Top Rated' },
+                            { id: 'rateAsc', label: '₹ Low to High' },
+                            { id: 'rateDesc', label: '₹ High to Low' },
+                            { id: 'experience', label: '💼 Experience' }
+                          ].map(opt => (
+                            <button
+                              key={opt.id}
+                              type="button"
+                              onClick={() => setCustomerSortBy(opt.id)}
+                              className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition duration-150 cursor-pointer ${
+                                customerSortBy === opt.id
+                                  ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/10'
+                                  : 'bg-slate-950 text-slate-400 hover:bg-slate-900 hover:text-white border border-slate-800'
+                              }`}
+                            >
+                              {opt.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
 
                       <div className="space-y-3">
                         {filteredExperts.map(exp => (
