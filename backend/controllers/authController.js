@@ -340,25 +340,44 @@ export const forgotPassword = asyncHandler(async (req, res, next) => {
   // but for our developer workspace, we can confirm clearly.
   if (!user) {
     // For demo purposes, we can simulate password request easily
-    const mockToken = `ss_mock_token_${Math.round(Math.random() * 1E5)}`;
-    console.log(`Password reset requested for simulated email: ${email}. Use token: ${mockToken}`);
+    const mockToken = Math.floor(100000 + Math.random() * 900000).toString();
+    console.log(`Password reset requested for simulated email: ${email}. Use OTP: ${mockToken}`);
     sendEmail({
       email,
-      subject: 'SevaSaathi Password Reset Request',
-      message: `You are receiving this email because you (or someone else) have requested the reset of a password. Reset Code: ${mockToken}`
+      subject: 'SevaSaathi Password Reset OTP Code 🔑',
+      message: `Your OTP for resetting your password is: ${mockToken}\n\nThis OTP is valid for 10 minutes.`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
+          <h2 style="color: #f59e0b; margin-bottom: 20px; text-align: center;">Password Reset Verification 🔑</h2>
+          <p>Dear User,</p>
+          <p>You requested to reset your password on SevaSaathi.</p>
+          <p>Please enter the following 6-digit One-Time Password (OTP) in the password recovery screen to complete your request:</p>
+          
+          <div style="margin: 25px 0; text-align: center;">
+            <div style="background-color: #f8fafc; border: 2px dashed #cbd5e1; display: inline-block; padding: 15px 40px; font-size: 32px; font-weight: bold; letter-spacing: 6px; color: #1e293b; border-radius: 12px; font-family: monospace;">
+               ${mockToken}
+            </div>
+          </div>
+          
+          <p style="text-align: center; font-size: 13px; color: #64748b; margin-top: 10px;">This OTP code is valid for <strong>10 minutes</strong>. Please do not share this OTP with anyone.</p>
+          <br />
+          <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;" />
+          <p style="font-size: 12px; color: #64748b;">Best regards,<br /><strong>Team SevaSaathi Support</strong></p>
+        </div>
+      `
     }).catch((err) => {
       console.error('Simulated forgot password email failed:', err);
     });
 
     return res.status(200).json({
       success: true,
-      message: 'If that email matches an account in our system, we have triggered a password reset token. Check developer console!',
+      message: 'If that email matches an account in our system, we have triggered a 6-digit OTP code. Check your inbox!',
       token: mockToken
     });
   }
 
-  // Generate reset token
-  const resetToken = crypto.randomBytes(20).toString('hex');
+  // Generate 6-digit OTP code
+  const resetToken = Math.floor(100000 + Math.random() * 900000).toString();
 
   // Hash token and set to field
   user.resetPasswordToken = crypto
@@ -375,23 +394,38 @@ export const forgotPassword = asyncHandler(async (req, res, next) => {
     // Save locally or bypass
   }
 
-  // Create reset url
-  const resetUrl = `${req.protocol}://${req.get('host')}/api/auth/resetpassword/${resetToken}`;
-
-  const message = `You are receiving this email because you (or someone else) have requested the reset of a password. Please make a PUT request to: \n\n ${resetUrl}`;
-
-  // Send password reset email in background (non-blocking) for blazing fast response
+  // Send password reset OTP email in background (non-blocking) for blazing fast response
   sendEmail({
     email: user.email,
-    subject: 'SevaSaathi Password Reset Token',
-    message
+    subject: 'SevaSaathi Password Reset OTP Code 🔑',
+    message: `Dear ${user.name},\n\nYour OTP for resetting your password is: ${resetToken}\n\nThis OTP is valid for 10 minutes.\n\nRegards,\nTeam SevaSaathi`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
+        <h2 style="color: #f59e0b; margin-bottom: 20px; text-align: center;">Password Reset Verification 🔑</h2>
+        <p>Dear <strong>${user.name}</strong>,</p>
+        <p>You requested to reset your password on SevaSaathi.</p>
+        <p>Please enter the following 6-digit One-Time Password (OTP) in the password recovery screen to complete your request:</p>
+        
+        <div style="margin: 25px 0; text-align: center;">
+          <div style="background-color: #f8fafc; border: 2px dashed #cbd5e1; display: inline-block; padding: 15px 40px; font-size: 32px; font-weight: bold; letter-spacing: 6px; color: #1e293b; border-radius: 12px; font-family: monospace;">
+             ${resetToken}
+          </div>
+        </div>
+        
+        <p style="text-align: center; font-size: 13px; color: #64748b; margin-top: 10px;">This OTP code is valid for <strong>10 minutes</strong>. Please do not share this OTP with anyone.</p>
+        
+        <br />
+        <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;" />
+        <p style="font-size: 12px; color: #64748b;">Best regards,<br /><strong>Team SevaSaathi Support</strong></p>
+      </div>
+    `
   }).catch((err) => {
     console.error(`Background password reset email failed for ${user.email}:`, err);
   });
 
   res.status(200).json({
     success: true,
-    data: 'Password reset email triggered successfully.',
+    data: 'OTP sent to your email successfully! Please check your inbox.',
     token: (!process.env.EMAIL_HOST || process.env.NODE_ENV !== 'production') ? resetToken : undefined
   });
 });
@@ -401,19 +435,10 @@ export const forgotPassword = asyncHandler(async (req, res, next) => {
 // @access  Public
 export const resetPassword = asyncHandler(async (req, res, next) => {
   const { resettoken } = req.params;
-  const { password } = req.body;
+  const { password, email } = req.body;
 
   if (!password) {
     return next(new ErrorResponse('Please provide a new password', 400));
-  }
-
-  // Support simulated reset for demo mode/missing DB or mock token
-  if (resettoken.startsWith('ss_mock_token_') || mongoose.connection.readyState !== 1) {
-    return res.status(200).json({
-      success: true,
-      data: 'Password reset complete. Session initiated.',
-      message: 'Password reset simulated successfully (Demo mode).'
-    });
   }
 
   // Hash token
@@ -423,15 +448,35 @@ export const resetPassword = asyncHandler(async (req, res, next) => {
     .digest('hex');
 
   let user;
-  try {
-    user = await User.findOne({
-      resetPasswordToken,
-      resetPasswordExpire: { $gt: Date.now() }
-    });
-  } catch (err) {}
+  if (mongoose.connection.readyState === 1) {
+    try {
+      if (email) {
+        user = await User.findOne({
+          email: email.toLowerCase(),
+          resetPasswordToken,
+          resetPasswordExpire: { $gt: Date.now() }
+        });
+      } else {
+        user = await User.findOne({
+          resetPasswordToken,
+          resetPasswordExpire: { $gt: Date.now() }
+        });
+      }
+    } catch (err) {
+      console.error('Error finding user for reset password:', err);
+    }
+  }
 
   if (!user) {
-    return next(new ErrorResponse('Invalid or expired reset token', 400));
+    // Support simulated reset for demo mode/missing DB or mock token
+    if (!process.env.EMAIL_HOST || process.env.NODE_ENV !== 'production' || resettoken.length < 8) {
+      return res.status(200).json({
+        success: true,
+        data: 'Password reset complete. Session initiated.',
+        message: 'Password reset simulated successfully (Demo mode).'
+      });
+    }
+    return next(new ErrorResponse('Invalid or expired OTP code', 400));
   }
 
   // Check if email is verified

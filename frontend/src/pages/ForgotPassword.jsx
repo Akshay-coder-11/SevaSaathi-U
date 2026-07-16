@@ -37,7 +37,7 @@ export default function ForgotPassword() {
         setToken(res.token);
       }
       
-      setSuccessMsg(res.message || res.data || 'Password recovery token triggered successfully! Please check your email or development console.');
+      setSuccessMsg(res.message || res.data || '6-digit OTP code sent successfully! Please check your email inbox.');
       setStep(2);
     } catch (err) {
       setErrorMsg(err.message || 'Could not process password recovery request.');
@@ -49,7 +49,7 @@ export default function ForgotPassword() {
   const handleResetPassword = async (e) => {
     e.preventDefault();
     if (!token) {
-      setErrorMsg('Please enter the reset token.');
+      setErrorMsg('Please enter the 6-digit OTP code.');
       return;
     }
     if (!newPassword || newPassword.length < 6) {
@@ -62,14 +62,14 @@ export default function ForgotPassword() {
     setSuccessMsg(null);
 
     try {
-      const res = await api.put(`/auth/resetpassword/${token}`, { password: newPassword });
+      const res = await api.put(`/auth/resetpassword/${token}`, { password: newPassword, email });
       setSuccessMsg(res.data || res.message || 'Your password has been reset successfully! Redirecting to login...');
       
       setTimeout(() => {
         navigate('/login');
       }, 2500);
     } catch (err) {
-      setErrorMsg(err.message || 'Invalid or expired reset token.');
+      setErrorMsg(err.message || 'Invalid or expired OTP code.');
     } finally {
       setIsSubmitting(false);
     }
@@ -85,8 +85,8 @@ export default function ForgotPassword() {
           </h2>
           <p className="mt-2 text-sm text-slate-400">
             {step === 1 
-              ? 'Enter your email to receive a recovery token link' 
-              : 'Enter the recovery token and choose a new password'}
+              ? 'Enter your email to receive a secure 6-digit OTP' 
+              : `Enter the 6-digit OTP code sent to ${email} and set your new password`}
           </p>
         </div>
 
@@ -107,7 +107,7 @@ export default function ForgotPassword() {
         {demoTokenHint && (
           <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4 text-amber-400 text-xs font-medium space-y-1 animate-fadeIn">
             <p className="font-bold">✨ Dev & Demo Mode Assistant:</p>
-            <p>Since this email is running in simulator mode, we have automatically set your Token to: <code className="bg-slate-950 px-1.5 py-0.5 rounded text-white border border-slate-800">{demoTokenHint}</code></p>
+            <p>Since this email is running in simulated developer mode, we have auto-filled your 6-digit OTP code: <code className="bg-slate-950 px-1.5 py-0.5 rounded text-white border border-slate-800 font-mono tracking-wider">{demoTokenHint}</code></p>
           </div>
         )}
 
@@ -134,22 +134,23 @@ export default function ForgotPassword() {
                 disabled={isSubmitting}
                 className="w-full bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-slate-950 font-bold py-3.5 px-4 rounded-xl shadow-lg shadow-amber-500/10 hover:-translate-y-0.5 active:translate-y-0 transition duration-150 text-sm font-display flex items-center justify-center cursor-pointer"
               >
-                <span>{isSubmitting ? 'Requesting Recovery...' : 'Send Recovery Token'}</span>
+                <span>{isSubmitting ? 'Requesting OTP...' : 'Send 6-Digit OTP'}</span>
               </button>
             </form>
           ) : (
             <form onSubmit={handleResetPassword} className="space-y-5">
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Reset Token / Code</label>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">6-Digit OTP Code</label>
                 <div className="relative">
                   <Key className="absolute left-4 top-3.5 h-4.5 w-4.5 text-slate-500" />
                   <input
                     type="text"
                     required
-                    placeholder="Enter the reset token"
+                    maxLength={6}
+                    placeholder="e.g. 123456"
                     value={token}
-                    onChange={e => setToken(e.target.value)}
-                    className="w-full bg-slate-950/60 border border-slate-800 focus:border-amber-500 rounded-xl py-3 pl-12 pr-4 text-slate-200 placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-amber-500 text-sm transition"
+                    onChange={e => setToken(e.target.value.replace(/\D/g, ''))}
+                    className="w-full bg-slate-950/60 border border-slate-800 focus:border-amber-500 rounded-xl py-3 pl-12 pr-4 text-slate-200 placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-amber-500 text-sm tracking-widest font-mono font-bold transition"
                   />
                 </div>
               </div>
@@ -195,7 +196,7 @@ export default function ForgotPassword() {
                   }}
                   className="text-slate-400 hover:text-white text-xs font-semibold underline transition cursor-pointer"
                 >
-                  Resend token / Try different email
+                  Resend OTP / Try different email
                 </button>
               </div>
             </form>
