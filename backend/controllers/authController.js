@@ -107,6 +107,28 @@ export const register = asyncHandler(async (req, res, next) => {
 
   // Generate Session Token
   if (user.role === 'sub_admin' && !user.isAdminApproved) {
+    // Send Pending Approval Email
+    try {
+      await sendEmail({
+        email: user.email,
+        subject: 'SevaSaathi - Sub-Admin Registration Pending Approval ⏳',
+        message: `Dear ${user.name},\n\nThank you for registering as a sub-admin. Your request is pending approval by the main Administrator.\n\nRegards,\nTeam SevaSaathi`,
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
+            <h2 style="color: #ef4444; margin-bottom: 20px;">Registration Received ⏳</h2>
+            <p>Dear <strong>${user.name}</strong>,</p>
+            <p>Thank you for registering as a <strong>sub_admin</strong> on SevaSaathi.</p>
+            <p>Your account request is currently pending approval by the main Administrator. You will receive an email once your account has been reviewed and approved.</p>
+            <br />
+            <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;" />
+            <p style="font-size: 12px; color: #64748b;">Best regards,<br /><strong>Team SevaSaathi Support</strong></p>
+          </div>
+        `
+      });
+    } catch (emailErr) {
+      console.error('Pending approval email sending failed:', emailErr);
+    }
+
     return res.status(201).json({
       success: true,
       isPendingApproval: true,
@@ -125,6 +147,28 @@ export const register = asyncHandler(async (req, res, next) => {
 
   // Generate Session Token
   const token = generateToken(res, user._id || user.id);
+
+  // Send Welcome/Registration Confirmation Email
+  try {
+    await sendEmail({
+      email: user.email,
+      subject: 'Welcome to SevaSaathi - Registration Successful! 🎉',
+      message: `Dear ${user.name},\n\nWelcome to SevaSaathi! Your registration as a ${user.role} was successful.\n\nThank you for joining India's smart doorstep support network.\n\nRegards,\nTeam SevaSaathi`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
+          <h2 style="color: #f59e0b; margin-bottom: 20px;">Welcome to SevaSaathi! 🎉</h2>
+          <p>Dear <strong>${user.name}</strong>,</p>
+          <p>Your registration as a <strong>${user.role}</strong> has been successfully completed.</p>
+          <p>Thank you for joining India's smart doorstep support network. You can now log in to access your customized workspace, manage bookings, and communicate with ease.</p>
+          <br />
+          <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;" />
+          <p style="font-size: 12px; color: #64748b;">Best regards,<br /><strong>Team SevaSaathi Support</strong></p>
+        </div>
+      `
+    });
+  } catch (emailErr) {
+    console.error('Registration welcome email sending failed:', emailErr);
+  }
 
   res.status(201).json({
     success: true,
@@ -308,7 +352,7 @@ export const forgotPassword = asyncHandler(async (req, res, next) => {
     res.status(200).json({
       success: true,
       data: 'Password reset email triggered successfully.',
-      token: process.env.NODE_ENV !== 'production' ? resetToken : undefined
+      token: (!process.env.EMAIL_HOST || process.env.NODE_ENV !== 'production') ? resetToken : undefined
     });
   } catch (err) {
     user.resetPasswordToken = undefined;

@@ -1,7 +1,7 @@
 import nodemailer from 'nodemailer';
 
 const sendEmail = async (options) => {
-  const isDev = process.env.NODE_ENV !== 'production' || !process.env.EMAIL_HOST;
+  const isDev = !process.env.EMAIL_HOST;
 
   if (isDev) {
     console.log('[Nodemailer Mock] Simulation Email Sent:');
