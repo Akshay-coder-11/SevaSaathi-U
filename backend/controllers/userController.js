@@ -3,6 +3,7 @@ import User from '../models/User.js';
 import asyncHandler from '../middleware/asyncHandler.js';
 import ErrorResponse from '../utils/errorResponse.js';
 import bcrypt from 'bcryptjs';
+import { isVerificationCompulsory } from '../utils/verificationHelper.js';
 
 // @desc    Get current logged in user profile
 // @route   GET /api/user/profile
@@ -32,7 +33,7 @@ export const getProfile = asyncHandler(async (req, res, next) => {
       addresses: user.addresses || [],
       profileImage: user.profileImage || '',
       providerDetails: user.providerDetails,
-      isEmailVerified: user.isEmailVerified === undefined ? true : user.isEmailVerified
+      isEmailVerified: isVerificationCompulsory(user) ? (user.isEmailVerified === undefined ? true : user.isEmailVerified) : true
     }
   });
 });
@@ -98,7 +99,7 @@ export const updateProfile = asyncHandler(async (req, res, next) => {
       address: user.address,
       profileImage: user.profileImage,
       providerDetails: user.providerDetails,
-      isEmailVerified: user.isEmailVerified === undefined ? true : user.isEmailVerified
+      isEmailVerified: isVerificationCompulsory(user) ? (user.isEmailVerified === undefined ? true : user.isEmailVerified) : true
     }
   });
 });
@@ -130,7 +131,7 @@ export const changePassword = asyncHandler(async (req, res, next) => {
   }
 
   // Check if email is verified
-  if (user.isEmailVerified === false) {
+  if (isVerificationCompulsory(user) && user.isEmailVerified === false) {
     return next(new ErrorResponse('Please verify your email address before changing your password.', 400));
   }
 

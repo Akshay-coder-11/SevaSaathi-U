@@ -5,6 +5,7 @@ import asyncHandler from '../middleware/asyncHandler.js';
 import ErrorResponse from '../utils/errorResponse.js';
 import generateToken from '../utils/generateToken.js';
 import sendEmail from '../utils/sendEmail.js';
+import { isVerificationCompulsory } from '../utils/verificationHelper.js';
 
 // @desc    Register user
 // @route   POST /api/auth/register
@@ -294,7 +295,7 @@ export const login = asyncHandler(async (req, res, next) => {
       phone: user.phone,
       address: user.address,
       providerDetails: user.providerDetails,
-      isEmailVerified: user.isEmailVerified === undefined ? true : user.isEmailVerified
+      isEmailVerified: isVerificationCompulsory(user) ? (user.isEmailVerified === undefined ? true : user.isEmailVerified) : true
     }
   });
 });
@@ -332,7 +333,7 @@ export const forgotPassword = asyncHandler(async (req, res, next) => {
   }
 
   // Check if email is verified
-  if (user && user.isEmailVerified === false) {
+  if (user && isVerificationCompulsory(user) && user.isEmailVerified === false) {
     return next(new ErrorResponse('Please verify your email address before attempting to reset your password.', 400));
   }
 
@@ -480,7 +481,7 @@ export const resetPassword = asyncHandler(async (req, res, next) => {
   }
 
   // Check if email is verified
-  if (user.isEmailVerified === false) {
+  if (isVerificationCompulsory(user) && user.isEmailVerified === false) {
     return next(new ErrorResponse('Please verify your email address before resetting your password.', 400));
   }
 
@@ -638,7 +639,7 @@ export const googleLogin = asyncHandler(async (req, res, next) => {
       address: user.address || '',
       profileImage: user.profileImage || userPicture || '',
       providerDetails: user.providerDetails,
-      isEmailVerified: user.isEmailVerified === undefined ? true : user.isEmailVerified
+      isEmailVerified: isVerificationCompulsory(user) ? (user.isEmailVerified === undefined ? true : user.isEmailVerified) : true
     }
   });
 });
@@ -709,10 +710,10 @@ export const resendVerification = asyncHandler(async (req, res, next) => {
     return next(new ErrorResponse('User not found', 404));
   }
 
-  if (user.isEmailVerified) {
+  if (!isVerificationCompulsory(user) || user.isEmailVerified) {
     return res.status(400).json({
       success: false,
-      message: 'This email address is already verified!'
+      message: 'This email address is already verified or does not require verification!'
     });
   }
 
