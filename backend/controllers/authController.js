@@ -332,10 +332,6 @@ export const forgotPassword = asyncHandler(async (req, res, next) => {
     // Database fallback
   }
 
-  // Check if email is verified
-  if (user && isVerificationCompulsory(user) && user.isEmailVerified === false) {
-    return next(new ErrorResponse('Please verify your email address before attempting to reset your password.', 400));
-  }
 
   // If user doesn't exist, we still return a success message in production for security,
   // but for our developer workspace, we can confirm clearly.
@@ -480,15 +476,13 @@ export const resetPassword = asyncHandler(async (req, res, next) => {
     return next(new ErrorResponse('Invalid or expired OTP code', 400));
   }
 
-  // Check if email is verified
-  if (isVerificationCompulsory(user) && user.isEmailVerified === false) {
-    return next(new ErrorResponse('Please verify your email address before resetting your password.', 400));
-  }
-
   // Set new password
   user.password = password;
   user.resetPasswordToken = undefined;
   user.resetPasswordExpire = undefined;
+  
+  // Since the user successfully entered the secure OTP code sent to their email, they have verified their email ownership.
+  user.isEmailVerified = true;
   
   try {
     await user.save();
