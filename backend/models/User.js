@@ -67,6 +67,9 @@ const UserSchema = new mongoose.Schema({
   providerDetails: ProviderDetailsSchema,
   resetPasswordToken: String,
   resetPasswordExpire: Date,
+  isEmailVerified: { type: Boolean, default: false },
+  emailVerificationToken: String,
+  emailVerificationExpire: Date,
   isSuspended: { type: Boolean, default: false },
   joinedAt: { type: Date, default: Date.now }
 });

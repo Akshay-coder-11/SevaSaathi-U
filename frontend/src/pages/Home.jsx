@@ -166,6 +166,53 @@ export default function Home() {
     confirmPassword: ''
   });
 
+  const [sendingVerification, setSendingVerification] = useState(false);
+
+  // Parse email verification URL parameters on mount
+  useEffect(() => {
+    const verified = searchParams.get('email_verified');
+    if (verified === 'true') {
+      setSuccessMsg('🎉 Your email has been successfully verified! All platform options are now unlocked.');
+      
+      // Update user state locally
+      if (user) {
+        user.isEmailVerified = true;
+      }
+      
+      // Clean query params
+      const newParams = new URLSearchParams(searchParams);
+      newParams.delete('email_verified');
+      setSearchParams(newParams);
+    } else if (verified === 'false') {
+      const msg = searchParams.get('message') || 'Invalid or expired email verification token.';
+      setErrorMsg(`⚠️ Email Verification Failed: ${msg}`);
+      
+      const newParams = new URLSearchParams(searchParams);
+      newParams.delete('email_verified');
+      newParams.delete('message');
+      setSearchParams(newParams);
+    }
+  }, [searchParams, setSearchParams, user]);
+
+  const handleResendVerification = async () => {
+    if (!user || !user.email) return;
+    setSendingVerification(true);
+    setErrorMsg(null);
+    setSuccessMsg(null);
+    try {
+      const res = await api.post('/auth/resend-verification', { email: user.email });
+      if (res.success) {
+        setSuccessMsg(res.message || 'Verification email sent successfully! Please check your inbox.');
+      } else {
+        setErrorMsg(res.message || 'Failed to resend verification email.');
+      }
+    } catch (err) {
+      setErrorMsg(err.response?.data?.message || err.message || 'Failed to resend verification email.');
+    } finally {
+      setSendingVerification(false);
+    }
+  };
+
   // Populate form fields when user state is loaded or changes
   useEffect(() => {
     if (user) {
@@ -1542,6 +1589,28 @@ export default function Home() {
             <div className="bg-rose-500/10 border border-rose-500/20 rounded-xl p-4 flex items-center space-x-3 text-rose-400 animate-fade-in shrink-0">
               <AlertTriangle className="w-5 h-5 shrink-0" />
               <span className="text-xs font-semibold">{errorMsg}</span>
+            </div>
+          )}
+
+          {/* Email Verification Warning Banner */}
+          {user && user.isEmailVerified === false && (
+            <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-amber-400 animate-fade-in shrink-0">
+              <div className="flex items-start space-x-3">
+                <AlertTriangle className="w-5 h-5 shrink-0 text-amber-500 mt-0.5" />
+                <div>
+                  <h4 className="text-xs font-bold text-amber-300">Email Verification Required ✉️</h4>
+                  <p className="text-[11px] text-slate-300 mt-0.5 leading-relaxed">
+                    Please verify your email address to unlock all platform security features (such as changing your password). We sent a link to <strong className="text-amber-400 font-semibold">{user.email}</strong>.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={handleResendVerification}
+                disabled={sendingVerification}
+                className="text-[11px] font-bold px-3 py-1.5 rounded-lg bg-amber-500 text-slate-950 hover:bg-amber-400 disabled:opacity-50 transition shrink-0 self-start sm:self-center cursor-pointer"
+              >
+                {sendingVerification ? 'Sending...' : 'Resend Verification Link'}
+              </button>
             </div>
           )}
 

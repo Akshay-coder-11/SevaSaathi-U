@@ -31,7 +31,8 @@ export const getProfile = asyncHandler(async (req, res, next) => {
       address: user.address,
       addresses: user.addresses || [],
       profileImage: user.profileImage || '',
-      providerDetails: user.providerDetails
+      providerDetails: user.providerDetails,
+      isEmailVerified: user.isEmailVerified === undefined ? true : user.isEmailVerified
     }
   });
 });
@@ -96,7 +97,8 @@ export const updateProfile = asyncHandler(async (req, res, next) => {
       phone: user.phone,
       address: user.address,
       profileImage: user.profileImage,
-      providerDetails: user.providerDetails
+      providerDetails: user.providerDetails,
+      isEmailVerified: user.isEmailVerified === undefined ? true : user.isEmailVerified
     }
   });
 });
@@ -125,6 +127,11 @@ export const changePassword = asyncHandler(async (req, res, next) => {
       success: true,
       message: 'Password override simulated successfully for preview session!'
     });
+  }
+
+  // Check if email is verified
+  if (user.isEmailVerified === false) {
+    return next(new ErrorResponse('Please verify your email address before changing your password.', 400));
   }
 
   // Verify current password match
