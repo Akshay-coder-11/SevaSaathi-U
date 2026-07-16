@@ -1,16 +1,22 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import Logo from './Logo';
 import { 
   Home, Briefcase, MapPin, Sparkles, Users, Clock, LogOut, 
-  ShieldAlert, UserCheck, Menu, X, ArrowLeftRight, HelpCircle, Star, ShieldCheck, Heart
+  ShieldAlert, UserCheck, Menu, X, ArrowLeftRight, HelpCircle, Star, ShieldCheck, Heart, Zap
 } from 'lucide-react';
 
 export default function Sidebar({ activeTab, setActiveTab }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  useEffect(() => {
+    const handleToggle = () => setMobileOpen(prev => !prev);
+    window.addEventListener('toggle-sidebar', handleToggle);
+    return () => window.removeEventListener('toggle-sidebar', handleToggle);
+  }, []);
 
   const handleLogout = async () => {
     await logout();
@@ -25,10 +31,11 @@ export default function Sidebar({ activeTab, setActiveTab }) {
     if (user.role === 'customer') {
       links = [
         { id: 'browse', label: 'Find Experts', icon: Home, badge: 'Active' },
+        { id: 'broadcast', label: 'Need super fast help', icon: Zap, highlight: true },
         { id: 'favorites', label: 'My Favorites', icon: Heart },
         { id: 'bookings', label: 'My Bookings', icon: Briefcase },
         { id: 'addresses', label: 'Doorstep Address', icon: MapPin },
-        { id: 'ai-mitra', label: 'SevaSaathi AI Support', icon: Sparkles, highlight: true }
+        { id: 'ai-mitra', label: 'SevaSaathi AI Support', icon: Sparkles }
       ];
     } else if (user.role === 'provider') {
       links = [
@@ -75,7 +82,11 @@ export default function Sidebar({ activeTab, setActiveTab }) {
             <button
               key={link.id}
               onClick={() => {
-                setActiveTab(link.id);
+                if (link.id === 'broadcast') {
+                  window.dispatchEvent(new CustomEvent('trigger-broadcast'));
+                } else {
+                  setActiveTab(link.id);
+                }
                 setMobileOpen(false);
               }}
               className={`w-full flex items-center justify-between px-3 py-3 rounded-xl text-xs font-semibold tracking-wide transition duration-150 cursor-pointer ${

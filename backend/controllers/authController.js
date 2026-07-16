@@ -31,12 +31,41 @@ export const register = asyncHandler(async (req, res, next) => {
     return next(new ErrorResponse('An account with this email already exists', 400));
   }
 
+  // Check if role is admin or sub_admin
+  let finalRole = role || 'customer';
+  let isAdminApproved = true;
+
+  if (finalRole === 'admin' || finalRole === 'sub_admin') {
+    let adminExists = false;
+    if (mongoose.connection.readyState === 1) {
+      try {
+        const existingAdmin = await User.findOne({ role: 'admin' });
+        if (existingAdmin) {
+          adminExists = true;
+        }
+      } catch (err) {
+        console.warn("Could not query existing admins", err);
+      }
+    } else {
+      adminExists = true;
+    }
+
+    if (adminExists) {
+      finalRole = 'sub_admin';
+      isAdminApproved = false;
+    } else {
+      finalRole = 'admin';
+      isAdminApproved = true;
+    }
+  }
+
   // Create new user payload
   const userFields = {
     name,
     email: email.toLowerCase(),
     password,
-    role: role || 'customer',
+    role: finalRole,
+    isAdminApproved,
     phone,
     address: address || '',
     profileImage: '',
@@ -77,6 +106,24 @@ export const register = asyncHandler(async (req, res, next) => {
   }
 
   // Generate Session Token
+  if (user.role === 'sub_admin' && !user.isAdminApproved) {
+    return res.status(201).json({
+      success: true,
+      isPendingApproval: true,
+      message: 'Sub-admin registration request submitted successfully. It is pending approval by the main Administrator.',
+      user: {
+        id: user._id || user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        isAdminApproved: false,
+        phone: user.phone,
+        address: user.address
+      }
+    });
+  }
+
+  // Generate Session Token
   const token = generateToken(res, user._id || user.id);
 
   res.status(201).json({
@@ -87,6 +134,7 @@ export const register = asyncHandler(async (req, res, next) => {
       name: user.name,
       email: user.email,
       role: user.role,
+      isAdminApproved: true,
       phone: user.phone,
       address: user.address,
       providerDetails: user.providerDetails
@@ -151,6 +199,11 @@ export const login = asyncHandler(async (req, res, next) => {
 
   if (user.isSuspended) {
     return next(new ErrorResponse('This account has been suspended by the administrator.', 403));
+  }
+
+  // Check if sub-admin is approved
+  if (user.role === 'sub_admin' && user.isAdminApproved === false) {
+    return next(new ErrorResponse('Your sub-admin account is pending approval by the main Administrator. You cannot log in yet.', 403));
   }
 
   // Generate Token

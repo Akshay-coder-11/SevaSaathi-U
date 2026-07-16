@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { LogOut, ShieldAlert, UserCheck } from 'lucide-react';
+import { LogOut, ShieldAlert, UserCheck, Zap, Menu } from 'lucide-react';
 import Logo from './Logo';
 
 export default function Navbar() {
@@ -31,6 +31,15 @@ export default function Navbar() {
 
           {/* Navigation & Profile Actions - Visible on ALL screens directly */}
           <div className="flex items-center space-x-3">
+            {!user && (
+              <Link
+                to="/register"
+                className="hidden sm:flex items-center space-x-1 px-3 py-1.5 rounded-xl text-[10px] sm:text-xs font-bold bg-amber-500 hover:bg-amber-400 text-slate-950 shadow transition duration-150 cursor-pointer shrink-0"
+              >
+                <Zap className="w-3.5 h-3.5 fill-slate-950 text-slate-950" />
+                <span>Need Super Fast Service</span>
+              </Link>
+            )}
             {user ? (
               <div className="flex items-center space-x-3.5">
                 {/* Profile Badge details - hidden on small mobile, visible on tablet/desktop */}

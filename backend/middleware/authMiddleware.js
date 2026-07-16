@@ -70,6 +70,15 @@ export const authorizeRoles = (...roles) => {
         )
       );
     }
+    // Block unapproved sub_admin accounts
+    if (req.user.role === 'sub_admin' && req.user.isAdminApproved === false) {
+      return next(
+        new ErrorResponse(
+          'Your sub-admin account is pending approval by the main Administrator.',
+          403
+        )
+      );
+    }
     next();
   };
 };

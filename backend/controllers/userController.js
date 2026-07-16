@@ -250,6 +250,7 @@ export const getAllUsers = asyncHandler(async (req, res, next) => {
     address: user.address,
     profileImage: user.profileImage || '',
     isSuspended: !!user.isSuspended,
+    isAdminApproved: user.isAdminApproved !== false,
     providerDetails: user.providerDetails
   }));
 
@@ -410,6 +411,44 @@ export const deleteUser = asyncHandler(async (req, res, next) => {
   res.status(200).json({
     success: true,
     message: 'Simulation: user deleted successfully.'
+  });
+});
+
+// @desc    Approve sub-admin account (Admin only)
+// @route   PUT /api/user/admin/approve-subadmin/:id
+// @access  Private/Admin
+export const approveSubAdmin = asyncHandler(async (req, res, next) => {
+  const userId = req.params.id;
+  if (mongoose.connection.readyState === 1) {
+    try {
+      const user = await User.findById(userId);
+      if (!user) {
+        return next(new ErrorResponse('User not found', 404));
+      }
+      if (user.role !== 'sub_admin') {
+        return next(new ErrorResponse('User is not a sub-admin', 400));
+      }
+      user.isAdminApproved = true;
+      await user.save();
+      return res.status(200).json({
+        success: true,
+        message: 'Sub-admin account approved successfully',
+        user: {
+          id: user._id || user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          isAdminApproved: user.isAdminApproved
+        }
+      });
+    } catch (err) {
+      return next(new ErrorResponse('Database error while approving sub-admin', 500));
+    }
+  }
+
+  res.status(200).json({
+    success: true,
+    message: 'Simulation: sub-admin approved successfully.'
   });
 });
 

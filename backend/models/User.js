@@ -53,9 +53,10 @@ const UserSchema = new mongoose.Schema({
   role: { 
     type: String, 
     required: true, 
-    enum: ['customer', 'provider', 'admin'],
+    enum: ['customer', 'provider', 'admin', 'sub_admin'],
     default: 'customer' 
   },
+  isAdminApproved: { type: Boolean, default: true },
   phone: { 
     type: String, 
     required: [true, 'Please add a phone number'] 
