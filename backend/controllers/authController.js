@@ -391,34 +391,37 @@ export const forgotPassword = asyncHandler(async (req, res, next) => {
     // Save locally or bypass
   }
 
-  // Send password reset OTP email in background (non-blocking) for blazing fast response
-  sendEmail({
-    email: user.email,
-    subject: 'SevaSaathi Password Reset OTP Code 🔑',
-    message: `Dear ${user.name},\n\nYour OTP for resetting your password is: ${resetToken}\n\nThis OTP is valid for 10 minutes.\n\nRegards,\nTeam SevaSaathi`,
-    html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
-        <h2 style="color: #f59e0b; margin-bottom: 20px; text-align: center;">Password Reset Verification 🔑</h2>
-        <p>Dear <strong>${user.name}</strong>,</p>
-        <p>You requested to reset your password on SevaSaathi.</p>
-        <p>Please enter the following 6-digit One-Time Password (OTP) in the password recovery screen to complete your request:</p>
-        
-        <div style="margin: 25px 0; text-align: center;">
-          <div style="background-color: #f8fafc; border: 2px dashed #cbd5e1; display: inline-block; padding: 15px 40px; font-size: 32px; font-weight: bold; letter-spacing: 6px; color: #1e293b; border-radius: 12px; font-family: monospace;">
-             ${resetToken}
+  // Send password reset OTP email. If SMTP is configured, we await and catch errors to report them.
+  try {
+    await sendEmail({
+      email: user.email,
+      subject: 'SevaSaathi Password Reset OTP Code 🔑',
+      message: `Dear ${user.name},\n\nYour OTP for resetting your password is: ${resetToken}\n\nThis OTP is valid for 10 minutes.\n\nRegards,\nTeam SevaSaathi`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
+          <h2 style="color: #f59e0b; margin-bottom: 20px; text-align: center;">Password Reset Verification 🔑</h2>
+          <p>Dear <strong>${user.name}</strong>,</p>
+          <p>You requested to reset your password on SevaSaathi.</p>
+          <p>Please enter the following 6-digit One-Time Password (OTP) in the password recovery screen to complete your request:</p>
+          
+          <div style="margin: 25px 0; text-align: center;">
+            <div style="background-color: #f8fafc; border: 2px dashed #cbd5e1; display: inline-block; padding: 15px 40px; font-size: 32px; font-weight: bold; letter-spacing: 6px; color: #1e293b; border-radius: 12px; font-family: monospace;">
+               ${resetToken}
+            </div>
           </div>
+          
+          <p style="text-align: center; font-size: 13px; color: #64748b; margin-top: 10px;">This OTP code is valid for <strong>10 minutes</strong>. Please do not share this OTP with anyone.</p>
+          
+          <br />
+          <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;" />
+          <p style="font-size: 12px; color: #64748b;">Best regards,<br /><strong>Team SevaSaathi Support</strong></p>
         </div>
-        
-        <p style="text-align: center; font-size: 13px; color: #64748b; margin-top: 10px;">This OTP code is valid for <strong>10 minutes</strong>. Please do not share this OTP with anyone.</p>
-        
-        <br />
-        <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;" />
-        <p style="font-size: 12px; color: #64748b;">Best regards,<br /><strong>Team SevaSaathi Support</strong></p>
-      </div>
-    `
-  }).catch((err) => {
-    console.error(`Background password reset email failed for ${user.email}:`, err);
-  });
+      `
+    });
+  } catch (err) {
+    console.error(`Password reset email failed for ${user.email}:`, err);
+    return next(new ErrorResponse(`Failed to send email: ${err.message || 'Please check your SMTP credentials/configuration.'}`, 500));
+  }
 
   res.status(200).json({
     success: true,
