@@ -330,21 +330,40 @@ export const forgotPassword = asyncHandler(async (req, res, next) => {
 
   try {
     if (email) {
-      user = await User.findOne({ email: email.toLowerCase() });
+      const sanitizedEmail = email.trim().toLowerCase();
+      user = await User.findOne({ email: sanitizedEmail });
+      
+      // Fallback: search in-memory to handle case/trim variations perfectly
+      if (!user) {
+        const allUsers = await User.find({});
+        user = allUsers.find(u => u.email && u.email.trim().toLowerCase() === sanitizedEmail);
+      }
     } else if (phone) {
       isPhoneRecovery = true;
       const sanitizedPhone = phone.trim().replace(/\D/g, ''); // get digits only
-      if (sanitizedPhone.length >= 10) {
-        // loose matching matching last 10 digits to bypass any country code differences (+91, 0, etc)
+      
+      // 1. Try exact match first
+      user = await User.findOne({ phone: phone.trim() });
+      
+      // 2. Try regex match for last 10 digits
+      if (!user && sanitizedPhone.length >= 10) {
         const lastTenDigits = sanitizedPhone.slice(-10);
         const phoneRegex = new RegExp(`${lastTenDigits}$`);
         user = await User.findOne({ phone: phoneRegex });
-      } else {
-        user = await User.findOne({ phone: phone.trim() });
+      }
+
+      // 3. Fallback: robust in-memory search to guarantee finding the user even if symbols or spaces are stored in the database
+      if (!user) {
+        const allUsers = await User.find({});
+        user = allUsers.find(u => {
+          if (!u.phone) return false;
+          const uSanitized = u.phone.replace(/\D/g, '');
+          return uSanitized.endsWith(sanitizedPhone.slice(-10)) || sanitizedPhone.endsWith(uSanitized.slice(-10));
+        });
       }
     }
   } catch (err) {
-    // Database fallback
+    console.error('Error finding user for forgot password:', err);
   }
 
   // If user doesn't exist, we still return a success message in production for security,
@@ -387,8 +406,7 @@ export const forgotPassword = asyncHandler(async (req, res, next) => {
       success: true,
       message: email 
         ? 'If that email matches an account in our system, we have triggered a 6-digit OTP code. Check your inbox!'
-        : 'If that phone number matches an account in our system, we have triggered a 6-digit OTP code. Check your screen!',
-      token: mockToken
+        : 'If that phone number matches an account in our system, we have triggered a 6-digit OTP code. Check your screen!'
     });
   }
 
@@ -446,7 +464,6 @@ export const forgotPassword = asyncHandler(async (req, res, next) => {
     return res.status(200).json({
       success: true,
       message: `OTP sent successfully to your registered mobile number ${user.phone}!`,
-      token: resetToken,
       email: user.email
     });
   }
@@ -478,13 +495,14 @@ export const forgotPassword = asyncHandler(async (req, res, next) => {
         </div>
       `
     });
+    console.log(`[DEV ONLY] OTP reset token for ${user.email} is: ${resetToken}`);
   } catch (err) {
     console.error(`Password reset email failed for ${user.email}:`, err);
+    console.log(`[DEV ONLY BACKUP] Email failed, but active OTP reset token for ${user.email} is: ${resetToken}`);
     // Dynamic fallback so the app is 100% WORKING even if the server SMTP config fails or is blocked on cloud networks like Render
     return res.status(200).json({
       success: true,
-      message: `Your reset code has been created successfully. (Email delivery is slow or currently offline: ${err.message || 'SMTP issue'}). Please use the code shown below.`,
-      token: resetToken,
+      message: `Your reset code has been created successfully. (Email delivery is slow or currently offline: ${err.message || 'SMTP issue'}). Please retrieve the code from support or check your inbox shortly.`,
       email: user.email
     });
   }
@@ -492,7 +510,6 @@ export const forgotPassword = asyncHandler(async (req, res, next) => {
   res.status(200).json({
     success: true,
     data: 'OTP sent to your email successfully! Please check your inbox.',
-    token: resetToken,
     email: user.email
   });
 });
@@ -502,7 +519,7 @@ export const forgotPassword = asyncHandler(async (req, res, next) => {
 // @access  Public
 export const resetPassword = asyncHandler(async (req, res, next) => {
   const { resettoken } = req.params;
-  const { password, email } = req.body;
+  const { password, email, phone } = req.body;
 
   if (!password) {
     return next(new ErrorResponse('Please provide a new password', 400));
@@ -517,17 +534,29 @@ export const resetPassword = asyncHandler(async (req, res, next) => {
   let user;
   if (mongoose.connection.readyState === 1) {
     try {
-      if (email) {
-        user = await User.findOne({
-          email: email.toLowerCase(),
-          resetPasswordToken,
-          resetPasswordExpire: { $gt: Date.now() }
-        });
-      } else {
-        user = await User.findOne({
-          resetPasswordToken,
-          resetPasswordExpire: { $gt: Date.now() }
-        });
+      // Find matching users with this valid token and unexpired timer
+      const matchingUsers = await User.find({
+        resetPasswordToken,
+        resetPasswordExpire: { $gt: Date.now() }
+      });
+
+      if (matchingUsers.length > 0) {
+        if (email) {
+          const sanitizedEmail = email.trim().toLowerCase();
+          user = matchingUsers.find(u => u.email && u.email.trim().toLowerCase() === sanitizedEmail);
+        } else if (phone) {
+          const sanitizedPhone = phone.trim().replace(/\D/g, '');
+          user = matchingUsers.find(u => {
+            if (!u.phone) return false;
+            const uSanitized = u.phone.replace(/\D/g, '');
+            return uSanitized.endsWith(sanitizedPhone.slice(-10)) || sanitizedPhone.endsWith(uSanitized.slice(-10));
+          });
+        }
+
+        // Fallback: if only one user is found with this token, use them
+        if (!user && matchingUsers.length === 1) {
+          user = matchingUsers[0];
+        }
       }
     } catch (err) {
       console.error('Error finding user for reset password:', err);
