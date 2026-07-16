@@ -30,35 +30,22 @@ const sendEmail = async (options) => {
     let transporterConfig = {
       pool: true, // Enable SMTP connection pooling for blazing fast delivery!
       maxConnections: 5,
-      maxMessages: 100
+      maxMessages: 100,
+      connectionTimeout: 5000, // Fail fast in 5s if port is blocked on Render
+      greetingTimeout: 5000,   // Fail fast in 5s if greeting is slow
+      socketTimeout: 10000     // 10s socket timeout
     };
 
-    // If using Gmail, use built-in 'gmail' service config or custom SMTP with 587
-    if (host.toLowerCase().includes('gmail')) {
-      if (port === 587) {
-        transporterConfig = {
-          ...transporterConfig,
-          host: 'smtp.gmail.com',
-          port: 587,
-          secure: false, // TLS
-          auth: {
-            user: process.env.EMAIL_USER,
-            pass: process.env.EMAIL_PASS
-          },
-          tls: {
-            rejectUnauthorized: false
-          }
-        };
-      } else {
-        transporterConfig = {
-          ...transporterConfig,
-          service: 'gmail',
-          auth: {
-            user: process.env.EMAIL_USER,
-            pass: process.env.EMAIL_PASS
-          }
-        };
-      }
+    // If using Gmail, use built-in 'gmail' service config by default as it is much more reliable than custom port 587 on cloud networks
+    if (host.toLowerCase().includes('gmail') || (process.env.EMAIL_USER && process.env.EMAIL_USER.toLowerCase().includes('gmail'))) {
+      transporterConfig = {
+        ...transporterConfig,
+        service: 'gmail',
+        auth: {
+          user: process.env.EMAIL_USER,
+          pass: process.env.EMAIL_PASS
+        }
+      };
     } else {
       transporterConfig = {
         ...transporterConfig,
