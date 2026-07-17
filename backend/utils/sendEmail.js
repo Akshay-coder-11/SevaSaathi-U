@@ -14,7 +14,7 @@ const sendEmail = async (options) => {
     
     try {
       await EmailLog.create({
-        recipient: options.email,
+        recipient: options.email.toLowerCase().trim(),
         subject: options.subject,
         status: 'simulated',
         smtpResponse: options.message || 'Simulated locally (missing SMTP credentials)',
@@ -30,7 +30,7 @@ const sendEmail = async (options) => {
   let logId = null;
   try {
     const logObj = await EmailLog.create({
-      recipient: options.email,
+      recipient: options.email.toLowerCase().trim(),
       subject: options.subject,
       status: 'pending',
       timestamp: new Date()

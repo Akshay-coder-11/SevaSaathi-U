@@ -138,9 +138,25 @@ export default function ForgotPassword() {
         )}
 
         {successMsg && (
-          <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-4 flex items-start space-x-3 text-emerald-400 animate-fadeIn">
-            <CheckCircle className="w-5 h-5 shrink-0 mt-0.5" />
-            <span className="text-xs font-semibold leading-normal">{successMsg}</span>
+          <div className="space-y-3">
+            <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-4 flex items-start space-x-3 text-emerald-400 animate-fadeIn">
+              <CheckCircle className="w-5 h-5 shrink-0 mt-0.5" />
+              <span className="text-xs font-semibold leading-normal">{successMsg}</span>
+            </div>
+            
+            {(successMsg.toLowerCase().includes('slow') || successMsg.toLowerCase().includes('offline') || successMsg.toLowerCase().includes('timeout') || successMsg.toLowerCase().includes('failed')) && (
+              <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4 space-y-2 text-amber-400 animate-fadeIn">
+                <div className="flex items-center space-x-2 font-bold text-xs">
+                  <AlertCircle className="w-4 h-4 text-amber-500 shrink-0" />
+                  <span>💡 Live Email Logs Fallback</span>
+                </div>
+                <p className="text-[11px] leading-relaxed text-slate-300">
+                  SMTP mail server ports are currently restricted or credentials are missing on the deployed cloud service. 
+                  Don't worry! We've captured your secure verification code on the server database. 
+                  <b> Simply click "Auto-Fill" in the Live Email Delivery Status box below </b> to load the 6-digit code automatically!
+                </p>
+              </div>
+            )}
           </div>
         )}
 
