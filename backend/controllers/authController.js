@@ -1,6 +1,7 @@
 import crypto from 'crypto';
 import mongoose from 'mongoose';
 import User from '../models/User.js';
+import EmailLog from '../models/EmailLog.js';
 import asyncHandler from '../middleware/asyncHandler.js';
 import ErrorResponse from '../utils/errorResponse.js';
 import generateToken from '../utils/generateToken.js';
@@ -472,14 +473,14 @@ export const forgotPassword = asyncHandler(async (req, res, next) => {
   try {
     await sendEmail({
       email: user.email,
-      subject: 'SevaSaathi Password Reset OTP Code 🔑',
-      message: `Dear ${user.name},\n\nYour OTP for resetting your password is: ${resetToken}\n\nThis OTP is valid for 10 minutes.\n\nRegards,\nTeam SevaSaathi`,
+      subject: 'SevaSaathi Verification Code',
+      message: `Dear ${user.name},\n\nYour security code for resetting your password is: ${resetToken}\n\nThis code is valid for 10 minutes.\n\nRegards,\nTeam SevaSaathi`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
-          <h2 style="color: #f59e0b; margin-bottom: 20px; text-align: center;">Password Reset Verification 🔑</h2>
+          <h2 style="color: #d97706; margin-bottom: 20px; text-align: center;">SevaSaathi Security Verification</h2>
           <p>Dear <strong>${user.name}</strong>,</p>
           <p>You requested to reset your password on SevaSaathi.</p>
-          <p>Please enter the following 6-digit One-Time Password (OTP) in the password recovery screen to complete your request:</p>
+          <p>Please enter the following 6-digit verification code in the password recovery screen to complete your request:</p>
           
           <div style="margin: 25px 0; text-align: center;">
             <div style="background-color: #f8fafc; border: 2px dashed #cbd5e1; display: inline-block; padding: 15px 40px; font-size: 32px; font-weight: bold; letter-spacing: 6px; color: #1e293b; border-radius: 12px; font-family: monospace;">
@@ -487,7 +488,7 @@ export const forgotPassword = asyncHandler(async (req, res, next) => {
             </div>
           </div>
           
-          <p style="text-align: center; font-size: 13px; color: #64748b; margin-top: 10px;">This OTP code is valid for <strong>10 minutes</strong>. Please do not share this OTP with anyone.</p>
+          <p style="text-align: center; font-size: 13px; color: #64748b; margin-top: 10px;">This verification code is valid for <strong>10 minutes</strong>. Please do not share this code with anyone.</p>
           
           <br />
           <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;" />
@@ -502,14 +503,14 @@ export const forgotPassword = asyncHandler(async (req, res, next) => {
     // Dynamic fallback so the app is 100% WORKING even if the server SMTP config fails or is blocked on cloud networks like Render
     return res.status(200).json({
       success: true,
-      message: `Your reset code has been created successfully. (Email delivery is slow or currently offline: ${err.message || 'SMTP issue'}). Please retrieve the code from support or check your inbox shortly.`,
+      message: `Your reset code has been created successfully. (Email delivery is slow or currently offline: ${err.message || 'SMTP issue'}). Please check your spam folder or check with support.`,
       email: user.email
     });
   }
 
   res.status(200).json({
     success: true,
-    data: 'OTP sent to your email successfully! Please check your inbox.',
+    data: 'OTP sent to your email successfully! Please check your inbox and Spam/Junk folder.',
     email: user.email
   });
 });
@@ -856,5 +857,34 @@ export const resendVerification = asyncHandler(async (req, res, next) => {
   res.status(200).json({
     success: true,
     message: 'Verification email resent successfully! Please check your inbox.'
+  });
+});
+
+// @desc    Get latest email status for debugging
+// @route   GET /api/auth/email-status/:email
+// @access  Public
+export const getEmailStatus = asyncHandler(async (req, res, next) => {
+  const { email } = req.params;
+
+  if (!email) {
+    return next(new ErrorResponse('Please provide an email address', 400));
+  }
+
+  const logs = await EmailLog.find({ recipient: email.toLowerCase().trim() })
+    .sort({ timestamp: -1 })
+    .limit(5);
+
+  res.status(200).json({
+    success: true,
+    logs: logs.map(log => ({
+      _id: log._id,
+      recipient: log.recipient,
+      subject: log.subject,
+      status: log.status,
+      smtpResponse: log.smtpResponse,
+      errorMessage: log.errorMessage,
+      smtpConfig: log.smtpConfig,
+      timestamp: log.timestamp
+    }))
   });
 });

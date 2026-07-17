@@ -80,7 +80,7 @@ export default function Login() {
             <div>
               <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Email Address</label>
               <div className="relative">
-                <Mail className="absolute left-4 top-3.5 h-4.5 w-4.5 text-slate-500" />
+                <Mail className="absolute left-4 top-3.5 h-5 w-5 text-slate-500" />
                 <input
                   type="email"
                   required
@@ -103,7 +103,7 @@ export default function Login() {
                 </Link>
               </div>
               <div className="relative">
-                <Lock className="absolute left-4 top-3.5 h-4.5 w-4.5 text-slate-500" />
+                <Lock className="absolute left-4 top-3.5 h-5 w-5 text-slate-500" />
                 <input
                   type={showPassword ? "text" : "password"}
                   required
@@ -115,10 +115,10 @@ export default function Login() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-3.5 h-4.5 w-4.5 text-slate-500 hover:text-slate-300 transition focus:outline-none cursor-pointer flex items-center justify-center"
+                  className="absolute right-4 top-3.5 h-5 w-5 text-slate-500 hover:text-slate-300 transition focus:outline-none cursor-pointer flex items-center justify-center"
                   title={showPassword ? "Hide password" : "Show password"}
                 >
-                  {showPassword ? <EyeOff className="w-4.5 h-4.5" /> : <Eye className="w-4.5 h-4.5" />}
+                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
             </div>

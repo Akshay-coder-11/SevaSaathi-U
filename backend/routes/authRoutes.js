@@ -7,7 +7,8 @@ import {
   resetPassword,
   googleLogin,
   verifyEmail,
-  resendVerification
+  resendVerification,
+  getEmailStatus
 } from '../controllers/authController.js';
 import { protect } from '../middleware/authMiddleware.js';
 
@@ -21,5 +22,6 @@ router.post('/forgotpassword', forgotPassword);
 router.put('/resetpassword/:resettoken', resetPassword);
 router.get('/verify-email/:token', verifyEmail);
 router.post('/resend-verification', resendVerification);
+router.get('/email-status/:email', getEmailStatus);
 
 export default router;
