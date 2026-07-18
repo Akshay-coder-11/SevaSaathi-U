@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import api from '../services/api';
-import { Mail, CheckCircle, AlertCircle, ArrowLeft, Key, Lock, Eye, EyeOff } from 'lucide-react';
+import { Mail, CheckCircle, AlertCircle, ArrowLeft, Key, Lock, Eye, EyeOff, RefreshCw, Server, AlertTriangle, ShieldCheck } from 'lucide-react';
 
 export default function ForgotPassword() {
   const navigate = useNavigate();
@@ -15,6 +15,44 @@ export default function ForgotPassword() {
   const [errorMsg, setErrorMsg] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // SMTP Email status monitoring states
+  const [emailLogs, setEmailLogs] = useState([]);
+  const [isCheckingLogs, setIsCheckingLogs] = useState(false);
+  const [logError, setLogError] = useState(null);
+  const [autoPoll, setAutoPoll] = useState(false);
+
+  const fetchEmailLogs = async (emailToTrack) => {
+    const targetEmail = emailToTrack || email;
+    if (!targetEmail) return;
+    
+    setIsCheckingLogs(true);
+    setLogError(null);
+    try {
+      const res = await api.get(`/auth/email-status/${encodeURIComponent(targetEmail.trim())}`);
+      if (res.success && res.logs) {
+        setEmailLogs(res.logs);
+      }
+    } catch (err) {
+      setLogError(err.message || 'Failed to fetch email delivery status');
+    } finally {
+      setIsCheckingLogs(false);
+    }
+  };
+
+  // Poll logs automatically when we trigger forgot password
+  useEffect(() => {
+    let intervalId;
+    if (autoPoll && email) {
+      fetchEmailLogs(email);
+      intervalId = setInterval(() => {
+        fetchEmailLogs(email);
+      }, 3500);
+    }
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [autoPoll, email]);
+
   const handleRequestToken = async (e) => {
     e.preventDefault();
     
@@ -26,14 +64,19 @@ export default function ForgotPassword() {
     setIsSubmitting(true);
     setErrorMsg(null);
     setSuccessMsg(null);
+    setEmailLogs([]);
 
     try {
       const res = await api.post('/auth/forgotpassword', { email });
       
       setSuccessMsg(res.message || res.data || '6-digit verification code generated and sent to your email inbox successfully!');
       setStep(2);
+      setAutoPoll(true);
+      fetchEmailLogs(email);
     } catch (err) {
       setErrorMsg(err.message || 'Could not process password recovery request. Please verify details.');
+      // Still fetch logs to see why SMTP failed
+      fetchEmailLogs(email);
     } finally {
       setIsSubmitting(false);
     }
@@ -60,6 +103,7 @@ export default function ForgotPassword() {
         email
       });
       setSuccessMsg(res.data || res.message || 'Your password has been reset successfully! Redirecting to login...');
+      setAutoPoll(false);
       
       setTimeout(() => {
         navigate('/login');
@@ -106,7 +150,7 @@ export default function ForgotPassword() {
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Registered Email Address</label>
                 <div className="relative">
-                  <Mail className="absolute left-4 top-3.5 h-4.5 w-4.5 text-slate-500" />
+                  <Mail className="absolute left-4 top-3.5 h-5 w-5 text-slate-500" />
                   <input
                     type="email"
                     required
@@ -131,7 +175,7 @@ export default function ForgotPassword() {
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">6-Digit Verification Code</label>
                 <div className="relative">
-                  <Key className="absolute left-4 top-3.5 h-4.5 w-4.5 text-slate-500" />
+                  <Key className="absolute left-4 top-3.5 h-5 w-5 text-slate-500" />
                   <input
                     type="text"
                     required
@@ -147,7 +191,7 @@ export default function ForgotPassword() {
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">New Password</label>
                 <div className="relative">
-                  <Lock className="absolute left-4 top-3.5 h-4.5 w-4.5 text-slate-500" />
+                  <Lock className="absolute left-4 top-3.5 h-5 w-5 text-slate-500" />
                   <input
                     type={showPassword ? "text" : "password"}
                     required
@@ -159,9 +203,9 @@ export default function ForgotPassword() {
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-4 top-3.5 h-4.5 w-4.5 text-slate-500 hover:text-slate-300 transition focus:outline-none cursor-pointer flex items-center justify-center"
+                    className="absolute right-4 top-3.5 h-5 w-5 text-slate-500 hover:text-slate-300 transition focus:outline-none cursor-pointer flex items-center justify-center"
                   >
-                    {showPassword ? <EyeOff className="w-4.5 h-4.5" /> : <Eye className="w-4.5 h-4.5" />}
+                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                   </button>
                 </div>
               </div>
@@ -181,7 +225,6 @@ export default function ForgotPassword() {
                     setStep(1);
                     setErrorMsg(null);
                     setSuccessMsg(null);
-                    setDemoTokenHint(null);
                   }}
                   className="text-slate-400 hover:text-white text-xs font-semibold underline transition cursor-pointer"
                 >
@@ -201,6 +244,8 @@ export default function ForgotPassword() {
             </Link>
           </div>
         </div>
+
+        {/* Real-time SMTP email delivery logs are completely hidden from guest pages to maintain a clean production aesthetic */}
 
       </div>
     </div>
