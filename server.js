@@ -30,7 +30,7 @@ if (isProduction) {
   // In production, Render uses PORT env variable
   const PORT = process.env.PORT || 3000;
   app.listen(PORT, '0.0.0.0', () => {
-    console.log(`🚀 Production server running on port ${PORT}`);
+    console.log(`Production server running on port ${PORT}`);
   });
 } else {
   // Route-specific API Error Handling (unmatched /api routes in development)
@@ -40,7 +40,7 @@ if (isProduction) {
   // Start Express Backend on Port 5000 in development
   const BACKEND_PORT = process.env.BACKEND_PORT || 5000;
   app.listen(BACKEND_PORT, () => {
-    console.log(`🚀 Backend running on http://localhost:${BACKEND_PORT}`);
+    console.log(` Backend running on http://localhost:${BACKEND_PORT}`);
   });
 
   // Start Vite Dev Server on Port 3000 in development
